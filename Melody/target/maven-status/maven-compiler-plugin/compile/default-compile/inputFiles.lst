@@ -1,0 +1,15 @@
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\config\SecurityConfig.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\controller\AuthController.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\dto\AuthResponse.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\dto\ForgotPasswordRequest.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\dto\LoginRequest.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\dto\RegisterRequest.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\dto\ResetPasswordRequest.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\entity\PasswordResetToken.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\entity\User.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\MelodyApplication.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\repository\PasswordResetTokenRepository.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\repository\UserRepository.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\security\JwtAuthenticationFilter.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\security\JwtService.java
+C:\Users\user\IdeaProjects\Melody\src\main\java\com\melody\backend\service\AuthService.java

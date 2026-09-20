@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Melody - Account</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- ================= LOGO ================= -->
+    <div class="logo">
+
+        <div class="logo-icon">
+            ♫
+        </div>
+
+        <h1>Melody</h1>
+
+        <p>Your music. Your world.</p>
+
+    </div>
+
+
+    <!-- ================= CARD ================= -->
+    <div class="card">
+
+        <!-- ================= TABS ================= -->
+        <div class="tabs">
+
+            <button
+                    id="loginTab"
+                    class="tab active"
+                    type="button"
+                    onclick="showLogin()">
+
+                Login
+
+            </button>
+
+            <button
+                    id="signupTab"
+                    class="tab"
+                    type="button"
+                    onclick="showSignup()">
+
+                Sign Up
+
+            </button>
+
+        </div>
+
+
+        <!-- ================= MESSAGE ================= -->
+        <div
+                id="message"
+                class="message">
+        </div>
+
+
+        <!-- ================= LOGIN FORM ================= -->
+        <div
+                id="loginForm"
+                class="form active">
+
+            <div class="input-group">
+
+                <label for="loginEmail">
+                    Email
+                </label>
+
+                <input
+                        id="loginEmail"
+                        type="email"
+                        placeholder="Enter your email"
+                        autocomplete="email">
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="loginPassword">
+                    Password
+                </label>
+
+                <input
+                        id="loginPassword"
+                        type="password"
+                        placeholder="Enter your password"
+                        autocomplete="current-password">
+
+            </div>
+
+
+            <div class="forgot">
+
+                <span onclick="showForgot()">
+                    Forgot password?
+                </span>
+
+            </div>
+
+
+            <button
+                    class="primary-btn"
+                    type="button"
+                    onclick="login()">
+
+                Login
+
+            </button>
+
+
+            <div class="divider">
+                OR
+            </div>
+
+
+            <button
+                    class="google-btn"
+                    type="button"
+                    onclick="googleLogin()">
+
+                Continue with Google
+
+            </button>
+
+
+            <div class="bottom-text">
+
+                Don't have an account?
+
+                <span onclick="showSignup()">
+                    Sign up
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================= SIGNUP FORM ================= -->
+        <div
+                id="signupForm"
+                class="form">
+
+            <h2 class="form-title">
+                Create your account
+            </h2>
+
+
+            <p class="form-description">
+                Join Melody and start listening to your favorite music.
+            </p>
+
+
+            <div class="input-group">
+
+                <label for="signupName">
+                    Name
+                </label>
+
+                <input
+                        id="signupName"
+                        type="text"
+                        placeholder="Enter your name"
+                        autocomplete="name">
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="signupEmail">
+                    Email
+                </label>
+
+                <input
+                        id="signupEmail"
+                        type="email"
+                        placeholder="Enter your email"
+                        autocomplete="email">
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="signupPassword">
+                    Password
+                </label>
+
+                <input
+                        id="signupPassword"
+                        type="password"
+                        placeholder="Create a password"
+                        autocomplete="new-password">
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="confirmPassword">
+                    Confirm Password
+                </label>
+
+                <input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="Confirm your password"
+                        autocomplete="new-password">
+
+            </div>
+
+
+            <button
+                    class="primary-btn"
+                    type="button"
+                    onclick="signup()">
+
+                Create Account
+
+            </button>
+
+
+            <div class="divider">
+                OR
+            </div>
+
+
+            <button
+                    class="google-btn"
+                    type="button"
+                    onclick="googleLogin()">
+
+                Continue with Google
+
+            </button>
+
+
+            <div class="bottom-text">
+
+                Already have an account?
+
+                <span onclick="showLogin()">
+                    Login
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================= FORGOT PASSWORD FORM ================= -->
+        <div
+                id="forgotForm"
+                class="form">
+
+            <h2 class="form-title">
+                Forgot password?
+            </h2>
+
+
+            <p class="form-description">
+                Enter your email address and we'll send you a link to reset your password.
+            </p>
+
+
+            <div class="input-group">
+
+                <label for="forgotEmail">
+                    Email
+                </label>
+
+                <input
+                        id="forgotEmail"
+                        type="email"
+                        placeholder="Enter your email"
+                        autocomplete="email">
+
+            </div>
+
+
+            <button
+                    class="primary-btn"
+                    type="button"
+                    onclick="resetPassword()">
+
+                Send Reset Link
+
+            </button>
+
+
+            <div
+                    class="back-login"
+                    onclick="showLogin()">
+
+                ← Back to Login
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="/static/js/app.js"></script>
+
+</body>
+
+</html>
