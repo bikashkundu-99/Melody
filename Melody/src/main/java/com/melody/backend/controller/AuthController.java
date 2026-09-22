@@ -69,13 +69,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(
             @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest
-    ) {
-
+            HttpServletRequest httpRequest)
+    {
         try {
-
-            String ipAddress =
-                    httpRequest.getRemoteAddr();
+            String ipAddress = httpRequest.getRemoteAddr();
 
             AuthResponse response =
                     authService.login(

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Melody — Account</title>
+
+    <link rel="stylesheet" href="/static/css/account.css">
+
+</head>
+
+<body>
+
+<div class="account-page">
+
+    <div class="account-container">
+
+        <!-- Header -->
+
+        <div class="account-header">
+
+            <button
+                    class="back-button"
+                    onclick="goHome()">
+                ←
+            </button>
+
+            <h1>Account</h1>
+
+        </div>
+
+
+        <!-- Profile -->
+
+        <div class="profile-card">
+
+            <div
+                    class="large-profile"
+                    id="profileInitial">
+                U
+            </div>
+
+            <div class="profile-info">
+
+                <h2 id="profileName">
+                    User
+                </h2>
+
+                <p id="profileEmail">
+                    -
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- Options -->
+
+        <div class="options">
+
+            <!-- History -->
+
+            <button
+                    class="option"
+                    onclick="openHistory()">
+
+                <div class="option-icon">
+                    🕘
+                </div>
+
+                <div class="option-content">
+
+                    <strong>History</strong>
+
+                    <span>
+                        View your recently played songs
+                    </span>
+
+                </div>
+
+                <div class="arrow">
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- Account Details -->
+
+            <button
+                    class="option"
+                    onclick="toggleAccountDetails()">
+
+                <div class="option-icon">
+                    👤
+                </div>
+
+                <div class="option-content">
+
+                    <strong>Account Details</strong>
+
+                    <span>
+                        View your account information
+                    </span>
+
+                </div>
+
+                <div class="arrow">
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- Sign Out -->
+
+            <button
+                    class="option sign-out"
+                    onclick="signOut()">
+
+                <div class="option-icon">
+                    ↪
+                </div>
+
+                <div class="option-content">
+
+                    <strong>Sign Out</strong>
+
+                    <span>
+                        Sign out from this account
+                    </span>
+
+                </div>
+
+                <div class="arrow">
+                    ›
+                </div>
+
+            </button>
+
+        </div>
+
+
+        <!-- Account Details -->
+
+        <div
+                id="accountDetails"
+                class="details">
+
+            <h2>Account Details</h2>
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Name
+                </span>
+
+                <span
+                        class="detail-value"
+                        id="detailName">
+                    -
+                </span>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Email Address
+                </span>
+
+                <span
+                        class="detail-value"
+                        id="detailEmail">
+                    -
+                </span>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Joining Date
+                </span>
+
+                <span
+                        class="detail-value"
+                        id="detailJoiningDate">
+                    -
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="/static/js/account.js"></script>
+
+</body>
+
+</html>

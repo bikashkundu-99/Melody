@@ -108,6 +108,7 @@ public class AuthService {
                 savedUser.getId(),
                 savedUser.getName(),
                 savedUser.getEmail(),
+                user.getCreatedAt(),
                 "Account created successfully."
         );
     }
@@ -196,6 +197,7 @@ public class AuthService {
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
+                user.getCreatedAt(),
                 "Login successful."
         );
     }

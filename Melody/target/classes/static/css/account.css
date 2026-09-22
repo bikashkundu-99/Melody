@@ -1,0 +1,323 @@
+/* =====================================================
+   ACCOUNT PAGE
+===================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #090909;
+    color: #ffffff;
+    min-height: 100vh;
+}
+
+
+/* =====================================================
+   PAGE
+===================================================== */
+
+.account-page {
+    min-height: 100vh;
+    padding: 40px;
+}
+
+
+.account-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.account-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 35px;
+}
+
+
+.account-header h1 {
+    font-size: 28px;
+}
+
+
+.back-button {
+    width: 42px;
+    height: 42px;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #1b1b1b;
+    color: #ffffff;
+
+    font-size: 22px;
+
+    cursor: pointer;
+}
+
+
+.back-button:hover {
+    background: #292929;
+}
+
+
+/* =====================================================
+   PROFILE CARD
+===================================================== */
+
+.profile-card {
+    display: flex;
+    align-items: center;
+
+    gap: 18px;
+
+    padding: 25px;
+
+    background: #151515;
+
+    border-radius: 14px;
+
+    margin-bottom: 25px;
+}
+
+
+.large-profile {
+    width: 70px;
+    height: 70px;
+
+    border-radius: 50%;
+
+    background: linear-gradient(
+        135deg,
+        #ff0033,
+        #8c00ff
+    );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 28px;
+    font-weight: bold;
+}
+
+
+.profile-info h2 {
+    font-size: 21px;
+    margin-bottom: 6px;
+}
+
+
+.profile-info p {
+    color: #888888;
+    font-size: 14px;
+}
+
+
+/* =====================================================
+   OPTIONS
+===================================================== */
+
+.options {
+    background: #151515;
+
+    border-radius: 14px;
+
+    overflow: hidden;
+}
+
+
+.option {
+    width: 100%;
+    min-height: 75px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 18px;
+
+    padding: 15px 22px;
+
+    background: transparent;
+
+    border: none;
+    border-bottom: 1px solid #252525;
+
+    color: #ffffff;
+
+    text-align: left;
+
+    cursor: pointer;
+}
+
+
+.option:last-child {
+    border-bottom: none;
+}
+
+
+.option:hover {
+    background: #1d1d1d;
+}
+
+
+.option-icon {
+    width: 40px;
+    height: 40px;
+
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #252525;
+
+    font-size: 18px;
+}
+
+
+.option-content {
+    flex: 1;
+}
+
+
+.option-content strong {
+    display: block;
+
+    font-size: 15px;
+
+    margin-bottom: 5px;
+}
+
+
+.option-content span {
+    color: #777777;
+
+    font-size: 12px;
+}
+
+
+.arrow {
+    color: #777777;
+
+    font-size: 22px;
+}
+
+
+/* =====================================================
+   ACCOUNT DETAILS
+===================================================== */
+
+.details {
+    display: none;
+
+    margin-top: 20px;
+
+    background: #151515;
+
+    border-radius: 14px;
+
+    padding: 25px;
+}
+
+
+.details.visible {
+    display: block;
+}
+
+
+.details h2 {
+    font-size: 19px;
+
+    margin-bottom: 20px;
+}
+
+
+.detail-row {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 17px 0;
+
+    border-bottom: 1px solid #252525;
+}
+
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+
+.detail-label {
+    color: #777777;
+
+    font-size: 13px;
+}
+
+
+.detail-value {
+    font-size: 14px;
+
+    text-align: right;
+
+    max-width: 60%;
+
+    word-break: break-word;
+}
+
+
+/* =====================================================
+   SIGN OUT
+===================================================== */
+
+.sign-out {
+    color: #ff4d6d;
+}
+
+
+.sign-out .option-icon {
+    color: #ff4d6d;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 600px) {
+
+    .account-page {
+        padding: 20px;
+    }
+
+
+    .detail-row {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 7px;
+    }
+
+
+    .detail-value {
+        max-width: 100%;
+
+        text-align: left;
+    }
+
+}

@@ -1,5 +1,7 @@
 package com.melody.backend.dto;
 
+import java.time.LocalDateTime;
+
 public class AuthResponse {
 
     private String token;
@@ -7,6 +9,7 @@ public class AuthResponse {
     private String name;
     private String email;
     private String message;
+    private LocalDateTime createdAt;
 
     public AuthResponse() {
     }
@@ -16,12 +19,14 @@ public class AuthResponse {
             Long userId,
             String name,
             String email,
+            LocalDateTime createdAt,
             String message
     ) {
         this.token = token;
         this.userId = userId;
         this.name = name;
         this.email = email;
+        this.createdAt = createdAt;
         this.message = message;
     }
 
@@ -43,5 +48,12 @@ public class AuthResponse {
 
     public String getMessage() {
         return message;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
