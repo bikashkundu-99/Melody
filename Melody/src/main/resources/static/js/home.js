@@ -15,6 +15,7 @@ let playlists = [];
 let likedSongs = [];
 let likedSongIds = new Set();
 let pendingSaveSongId = null;
+const thumbnailCache = new Map();
 
 
 /* =====================================================
@@ -67,6 +68,89 @@ function getFullUrl(url) {
 
     const backendOrigin = new URL(API_URL).origin;
     return new URL(path.startsWith("/") ? path : `/${path}`, backendOrigin).href;
+}
+
+function songThumbnailSource(song) {
+    if (song?.thumbnailUrl) return getFullUrl(song.thumbnailUrl);
+
+    const knownCovers = {
+        afterhours: "AfterHours.jpg",
+        blindinglights: "BlindingLights.jpg",
+        dieforyou: "DieForYou.jpg",
+        mothtoaflame: "MothToAFlame.jpg",
+        oneofthegirls: "OneOfTheGirls.jpg",
+        saveyourtears: "SaveyourTears.jpg",
+        starboy: "Starboy.jpg"
+    };
+    const titleKey = String(song?.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const filename = knownCovers[titleKey];
+    return filename ? `${new URL(API_URL).origin}/images/${filename}` : "";
+}
+
+async function getDisplayThumbnailUrl(source) {
+    const target = new URL(source, window.location.href);
+    const backendOrigin = new URL(API_URL).origin;
+    if (target.origin !== backendOrigin) return target.href;
+
+    if (!thumbnailCache.has(target.href)) {
+        const request = fetch(target.href, { headers: getAuthHeaders() }).then(async response => {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem("melody_token");
+                localStorage.removeItem("melody_user");
+                window.location.href = "index.html";
+                throw new Error("Image request is unauthorized.");
+            }
+            if (!response.ok) throw new Error(`Image request failed (${response.status})`);
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType && !contentType.startsWith("image/")) {
+                throw new Error("Thumbnail URL did not return an image.");
+            }
+            return URL.createObjectURL(await response.blob());
+        });
+        thumbnailCache.set(target.href, request);
+        request.catch(() => {
+            if (thumbnailCache.get(target.href) === request) thumbnailCache.delete(target.href);
+        });
+    }
+    return thumbnailCache.get(target.href);
+}
+
+function applySongThumbnail(element, song) {
+    if (!element) return;
+    const isAlbumCard = element.classList.contains("album");
+    const thumbnailSource = songThumbnailSource(song);
+    element.dataset.thumbnailSource = thumbnailSource;
+    element.style.backgroundSize = "cover";
+    element.style.backgroundPosition = "center";
+    element.style.backgroundImage = "";
+    element.classList.remove("has-thumbnail");
+    if (!isAlbumCard) element.textContent = "♫";
+
+    if (!thumbnailSource) {
+        if (!isAlbumCard) element.textContent = "♫";
+        return;
+    }
+
+    element.title = song.title || "Song artwork";
+    getDisplayThumbnailUrl(thumbnailSource).then(displayUrl => {
+        if (element.dataset.thumbnailSource !== thumbnailSource) return;
+        const image = new Image();
+        image.onload = () => {
+            if (element.dataset.thumbnailSource !== thumbnailSource) return;
+            element.style.backgroundImage = `url("${displayUrl.replace(/"/g, "%22")}")`;
+            if (isAlbumCard) element.classList.add("has-thumbnail");
+            else element.textContent = "";
+        };
+        image.onerror = () => {
+            if (element.dataset.thumbnailSource !== thumbnailSource) return;
+            element.style.backgroundImage = "";
+            element.classList.remove("has-thumbnail");
+            if (!isAlbumCard) element.textContent = "♫";
+        };
+        image.src = displayUrl;
+    }).catch(error => {
+        console.warn(`Could not load thumbnail for ${song?.title || "song"}:`, error);
+    });
 }
 
 
@@ -215,6 +299,7 @@ function displaySearchResults(songs) {
         const cover = document.createElement("span");
         cover.className = `search-result-cover album-${(index % 4) + 1}`;
         cover.textContent = "♫";
+        applySongThumbnail(cover, song);
         const info = document.createElement("span");
         info.className = "search-result-info";
         const title = document.createElement("strong");
@@ -254,6 +339,18 @@ async function apiCall(path, options = {}) {
     return response.json();
 }
 
+function uniqueSongsById(songs) {
+    const seen = new Set();
+    return songs.filter(song => {
+        const id = song?.id;
+        if (id == null) return true;
+        const key = String(id);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 function renderRecentlyPlayed() {
     const grid = document.getElementById("recentGrid");
     if (!grid) return;
@@ -267,7 +364,7 @@ function renderRecentlyPlayed() {
         return;
     }
 
-    const uniqueRecentSongs = [...new Map(recentlyPlayed.map(song => [song.id, song])).values()].slice(0, 4);
+    const uniqueRecentSongs = uniqueSongsById(recentlyPlayed).slice(0, 4);
     uniqueRecentSongs.forEach((song, index) => {
         const card = document.createElement("button");
         card.type = "button";
@@ -275,12 +372,7 @@ function renderRecentlyPlayed() {
         const cover = document.createElement("span");
         cover.className = `album-small album-${(index % 4) + 1}`;
         cover.textContent = "♫";
-        if (song.thumbnailUrl) {
-            cover.style.backgroundImage = `url("${getFullUrl(song.thumbnailUrl)}")`;
-            cover.style.backgroundSize = "cover";
-            cover.style.backgroundPosition = "center";
-            cover.textContent = "";
-        }
+        applySongThumbnail(cover, song);
         const info = document.createElement("span");
         info.className = "song-info";
         const title = document.createElement("strong");
@@ -336,6 +428,8 @@ function bindSongsToMusicCards() {
             description.textContent =
                 song.artist || "Unknown artist";
         }
+
+        applySongThumbnail(card.querySelector(".album"), song);
 
 
         card.dataset.songIndex = index;
@@ -646,29 +740,7 @@ function updatePlayerUI(song) {
         );
 
 
-    if (playerCover) {
-
-        if (song.thumbnailUrl) {
-
-            playerCover.style.backgroundImage =
-                `url("${getFullUrl(song.thumbnailUrl)}")`;
-
-            playerCover.style.backgroundSize =
-                "cover";
-
-            playerCover.style.backgroundPosition =
-                "center";
-
-            playerCover.textContent = "";
-
-        } else {
-
-            playerCover.style.backgroundImage =
-                "";
-
-            playerCover.textContent = "♫";
-        }
-    }
+    applySongThumbnail(playerCover, song);
 
 
     /*
@@ -704,29 +776,7 @@ function updatePlayerUI(song) {
         );
 
 
-    if (expandedCover) {
-
-        if (song.thumbnailUrl) {
-
-            expandedCover.style.backgroundImage =
-                `url("${getFullUrl(song.thumbnailUrl)}")`;
-
-            expandedCover.style.backgroundSize =
-                "cover";
-
-            expandedCover.style.backgroundPosition =
-                "center";
-
-            expandedCover.textContent = "";
-
-        } else {
-
-            expandedCover.style.backgroundImage =
-                "";
-
-            expandedCover.textContent = "♫";
-        }
-    }
+    applySongThumbnail(expandedCover, song);
     updatePlayerLikeButtons(likedSongIds.has(song.id));
 }
 
@@ -761,6 +811,7 @@ function renderLikedSongs() {
         const cover = document.createElement("div");
         cover.className = `liked-cover album-${(index % 4) + 1}`;
         cover.textContent = "♫";
+        applySongThumbnail(cover, song);
         const info = document.createElement("div");
         info.className = "liked-song";
         const title = document.createElement("h3");
@@ -1867,10 +1918,7 @@ document.addEventListener(
                 const cover = document.createElement("div");
                 cover.className = `album-small album-${(index % 4) + 1}`;
                 cover.textContent = "♫";
-                if (song.thumbnailUrl) {
-                    cover.style.backgroundImage = `url("${getFullUrl(song.thumbnailUrl)}")`;
-                    cover.style.backgroundSize = "cover";
-                }
+                applySongThumbnail(cover, song);
                 const info = document.createElement("div");
                 info.className = "song-info";
                 const title = document.createElement("h3");
@@ -1969,7 +2017,7 @@ document.addEventListener(
                 if (kind === "recent") {
                     recentlyPlayed = await apiCall("/library/recent");
                     renderRecentlyPlayed();
-                    renderLibrarySongs(recentlyPlayed);
+                    renderLibrarySongs(uniqueSongsById(recentlyPlayed));
                     showLibrary("Recently played");
                 } else {
                     renderLibrarySongs(allSongs);
