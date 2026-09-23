@@ -321,3 +321,14 @@ body {
     }
 
 }
+/* Melody navy and teal account theme */
+body { background:radial-gradient(circle at 15% 10%,rgba(13,147,153,.18),transparent 35%),#0b1427; }
+.account-container { max-width:820px; }
+.account-header h1 { font-size:30px; }
+.back-button,.option-icon { background:#1b2d47; }
+.back-button:hover,.option:hover { background:#203550; }
+.profile-card,.options,.details { background:#111d33; border:1px solid #263853; }
+.large-profile { background:linear-gradient(135deg,#10c9cf,#3864dc); }
+.option { border-color:#263853; }
+.option-icon { color:#27d0d2; }
+.sign-out { color:#ff7188; }

@@ -7,8 +7,10 @@ const API_URL = "http://localhost:8080/api";
 
 let allSongs = [];
 let searchResults = [];
+let searchRequestId = 0;
 let currentSongIndex = -1;
 let currentSong = null;
+let recentlyPlayed = [];
 
 
 /* =====================================================
@@ -46,13 +48,21 @@ function getFullUrl(url) {
         return "";
     }
 
-    if (url.startsWith("http://") ||
-        url.startsWith("https://")) {
+    const value = String(url).trim().replace(/\\/g, "/");
 
-        return url;
+    if (/^https?:\/\//i.test(value)) {
+        return value;
     }
 
-    return "http://localhost:8080" + url;
+    // Database values can be either web paths or paths copied from the
+    // Spring project's static directory. Convert both to the served URL.
+    const staticPath = value.match(/\/static\/(.+)$/i);
+    let path = staticPath ? staticPath[1] : value;
+    path = path.replace(/^\/?src\/main\/resources\//i, "")
+        .replace(/^\/?static\//i, "");
+
+    const backendOrigin = new URL(API_URL).origin;
+    return new URL(path.startsWith("/") ? path : `/${path}`, backendOrigin).href;
 }
 
 
@@ -63,6 +73,7 @@ function getFullUrl(url) {
 async function searchSongs(query) {
 
     const text = query.trim();
+    const requestId = ++searchRequestId;
 
     try {
 
@@ -102,6 +113,8 @@ async function searchSongs(query) {
         }
 
         const songs = await response.json();
+
+        if (requestId !== searchRequestId) return;
 
         console.log("Search results:", songs);
 
@@ -179,105 +192,79 @@ async function loadSongs() {
 ===================================================== */
 
 function displaySearchResults(songs) {
-
-    const recentGrid =
-        document.querySelector(".recent-grid");
-
-    const recentTitle =
-        document.querySelector(
-            ".section:first-of-type .section-header h2"
-        );
-
-    if (!recentGrid) {
-        return;
-    }
-
+    const panel = document.getElementById("searchResultsPanel");
+    const grid = document.getElementById("searchResultsGrid");
+    if (!panel || !grid) return;
+    panel.hidden = false;
+    grid.replaceChildren();
     if (!songs || songs.length === 0) {
-
-        if (recentTitle) {
-            recentTitle.textContent = "Search results";
-        }
-
-        recentGrid.innerHTML = `
-            <div class="recent-card">
-                <div class="song-info">
-                    <h3>No songs found</h3>
-                    <p>Try another song, artist or album.</p>
-                </div>
-            </div>
-        `;
-
+        const empty = document.createElement("p");
+        empty.className = "search-empty";
+        empty.textContent = "No songs found. Try another search.";
+        grid.appendChild(empty);
         return;
     }
-
-
-    if (recentTitle) {
-        recentTitle.textContent = "Search results";
-    }
-
-
-    recentGrid.innerHTML = "";
-
-
     songs.forEach((song, index) => {
-
-        const card =
-            document.createElement("div");
-
-        card.className = "recent-card";
-
-        card.dataset.songIndex = index;
-
-        const album =
-            document.createElement("div");
-
-        album.className =
-            "album-small album-1";
-
-        album.textContent = "♫";
-
-
-        const info =
-            document.createElement("div");
-
-        info.className = "song-info";
-
-
-        const title =
-            document.createElement("h3");
-
-        title.textContent =
-            song.title || "Unknown title";
-
-
-        const artist =
-            document.createElement("p");
-
-        artist.textContent =
-            song.artist || "Unknown artist";
-
-
-        info.appendChild(title);
-        info.appendChild(artist);
-
-        card.appendChild(album);
-        card.appendChild(info);
-
-
-        card.addEventListener(
-            "click",
-            function () {
-
-                playSong(song);
-
-            }
-        );
-
-
-        recentGrid.appendChild(card);
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "search-result-row";
+        const cover = document.createElement("span");
+        cover.className = `search-result-cover album-${(index % 4) + 1}`;
+        cover.textContent = "♫";
+        const info = document.createElement("span");
+        info.className = "search-result-info";
+        const title = document.createElement("strong");
+        title.textContent = song.title || "Unknown title";
+        const artist = document.createElement("small");
+        artist.textContent = song.artist || "Unknown artist";
+        info.append(title, artist);
+        const play = document.createElement("span");
+        play.className = "search-result-play";
+        play.textContent = "▶";
+        row.append(cover, info, play);
+        row.addEventListener("click", () => playSong(song));
+        grid.appendChild(row);
     });
 }
 
+function renderRecentlyPlayed() {
+    const grid = document.getElementById("recentGrid");
+    if (!grid) return;
+
+    grid.replaceChildren();
+    if (!recentlyPlayed.length) {
+        const empty = document.createElement("p");
+        empty.className = "recent-empty";
+        empty.textContent = "Play a song and it will appear here.";
+        grid.appendChild(empty);
+        return;
+    }
+
+    recentlyPlayed.slice(0, 4).forEach((song, index) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "recent-card";
+        const cover = document.createElement("span");
+        cover.className = `album-small album-${(index % 4) + 1}`;
+        cover.textContent = "♫";
+        if (song.thumbnailUrl) {
+            cover.style.backgroundImage = `url("${getFullUrl(song.thumbnailUrl)}")`;
+            cover.style.backgroundSize = "cover";
+            cover.style.backgroundPosition = "center";
+            cover.textContent = "";
+        }
+        const info = document.createElement("span");
+        info.className = "song-info";
+        const title = document.createElement("strong");
+        title.textContent = song.title || "Unknown title";
+        const artist = document.createElement("span");
+        artist.textContent = song.artist || "Unknown artist";
+        info.append(title, artist);
+        card.append(cover, info);
+        card.addEventListener("click", () => playSong(song));
+        grid.appendChild(card);
+    });
+}
 
 /* =====================================================
    BIND DATABASE SONGS TO EXISTING MUSIC CARDS
@@ -374,13 +361,95 @@ function bindSongsToMusicCards() {
 
 const audioPlayer =
     document.getElementById("audioPlayer");
+const seekSliders = document.querySelectorAll(".seek-slider");
+let progressAnimationFrame = 0;
+let playbackRequestId = 0;
+let activeAudioObjectUrl = null;
+let playbackNoticeTimer = null;
+
+function showPlaybackNotice(message) {
+    let notice = document.getElementById("playbackNotice");
+
+    if (!notice) {
+        notice = document.createElement("div");
+        notice.id = "playbackNotice";
+        notice.setAttribute("role", "status");
+        notice.setAttribute("aria-live", "polite");
+        notice.style.cssText = "position:fixed;left:50%;bottom:105px;transform:translateX(-50%);z-index:10000;padding:10px 16px;border-radius:999px;background:#172033;color:#fff;font:500 14px/1.4 system-ui,sans-serif;box-shadow:0 8px 28px #0005;max-width:min(90vw,520px);text-align:center;";
+        document.body.appendChild(notice);
+    }
+
+    notice.textContent = message;
+    notice.hidden = false;
+    clearTimeout(playbackNoticeTimer);
+    playbackNoticeTimer = setTimeout(() => { notice.hidden = true; }, 3500);
+}
+
+function formatTime(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, "0");
+    return `${minutes}:${remainingSeconds}`;
+}
+function syncProgressUI(progressOverride = null) {
+    if (progressOverride !== null && !Number.isFinite(Number(progressOverride))) progressOverride = null;
+    const duration = Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : 0;
+    const current = progressOverride !== null && duration > 0
+        ? Number(progressOverride) / 1000 * duration
+        : (Number.isFinite(audioPlayer.currentTime) ? audioPlayer.currentTime : 0);
+    const progress = progressOverride !== null
+        ? Math.max(0, Math.min(1000, Number(progressOverride)))
+        : (duration ? Math.max(0, Math.min(1000, Math.round(current / duration * 1000))) : 0);
+    document.querySelectorAll(".current-time").forEach((label) => label.textContent = formatTime(current));
+    document.querySelectorAll(".duration-time").forEach((label) => label.textContent = formatTime(duration));
+    seekSliders.forEach((slider) => {
+        slider.value = String(progress);
+        slider.style.background = `linear-gradient(to right,var(--teal) ${progress / 10}%,#52627a ${progress / 10}%)`;
+    });
+}
+function followAudioProgress() {
+    syncProgressUI();
+    if (!audioPlayer.paused && !audioPlayer.ended) {
+        progressAnimationFrame = requestAnimationFrame(followAudioProgress);
+    }
+}
+seekSliders.forEach((slider) => {
+    slider.addEventListener("click", (event) => event.stopPropagation());
+    slider.addEventListener("input", () => {
+        const duration = Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : 0;
+        if (duration <= 0) return;
+        const normalizedProgress = Number(slider.value);
+        audioPlayer.currentTime = normalizedProgress / 1000 * duration;
+        syncProgressUI(normalizedProgress);
+    });
+});
+["loadedmetadata", "durationchange", "timeupdate", "seeking", "seeked", "emptied"].forEach((eventName) => {
+    audioPlayer.addEventListener(eventName, () => syncProgressUI());
+});
+audioPlayer.addEventListener("play", () => {
+    cancelAnimationFrame(progressAnimationFrame);
+    followAudioProgress();
+});
+audioPlayer.addEventListener("pause", () => {
+    cancelAnimationFrame(progressAnimationFrame);
+    syncProgressUI();
+});
+audioPlayer.addEventListener("ended", () => syncProgressUI());
+audioPlayer.addEventListener("error", () => {
+    if (!audioPlayer.src) return;
+    const reason = audioPlayer.error?.message || "The audio file could not be decoded or loaded.";
+    console.error("Audio resource error:", reason);
+    updatePlayButtons(false);
+    showPlaybackNotice(`Couldn’t play ${currentSong?.title || "this song"}. Check that the audio file is valid.`);
+});
+syncProgressUI();
 
 
 /* =====================================================
    PLAY SONG
 ===================================================== */
 
-function playSong(song) {
+async function playSong(song) {
 
     if (!song) {
         return;
@@ -398,6 +467,12 @@ function playSong(song) {
 
 
     currentSong = song;
+    if (typeof recentlyPlayed !== "undefined") {
+        const previousIndex = recentlyPlayed.findIndex(item => item.id === song.id);
+        if (previousIndex !== -1) recentlyPlayed.splice(previousIndex, 1);
+        recentlyPlayed.unshift(song);
+        renderRecentlyPlayed();
+    }
 
 
     /*
@@ -414,8 +489,8 @@ function playSong(song) {
     }
 
 
-    const audioUrl =
-        getFullUrl(song.audioUrl);
+    const audioUrl = getFullUrl(song.audioUrl);
+    const requestId = ++playbackRequestId;
 
 
     console.log(
@@ -429,27 +504,68 @@ function playSong(song) {
     );
 
 
-    audioPlayer.src = audioUrl;
-
+    audioPlayer.pause();
+    audioPlayer.removeAttribute("src");
     audioPlayer.load();
+    if (activeAudioObjectUrl) {
+        URL.revokeObjectURL(activeAudioObjectUrl);
+        activeAudioObjectUrl = null;
+    }
+    syncProgressUI(0);
 
+    showPlaybackNotice(`Loading ${song.title || "song"}…`);
 
-    audioPlayer.play()
-        .then(() => {
+    try {
+        const targetUrl = new URL(audioUrl, window.location.href);
+        const backendOrigin = new URL(API_URL).origin;
+        let playableUrl = audioUrl;
 
-            updatePlayerUI(song);
+        // Native <audio> requests cannot include the app's bearer token.
+        // Fetch protected backend audio with the token, then play the blob.
+        if (targetUrl.origin === backendOrigin) {
+            const response = await fetch(targetUrl.href, {
+                method: "GET",
+                headers: getAuthHeaders()
+            });
 
-            updatePlayButtons(true);
+            if (requestId !== playbackRequestId) return;
 
-        })
-        .catch(error => {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem("melody_token");
+                localStorage.removeItem("melody_user");
+                window.location.href = "index.html";
+                return;
+            }
 
-            console.error(
-                "Audio playback failed:",
-                error
-            );
+            if (!response.ok) {
+                throw new Error(`Audio request failed (${response.status})`);
+            }
 
-        });
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType.includes("application/json") || contentType.includes("text/html")) {
+                throw new Error("The audio URL returned a page instead of an audio file.");
+            }
+
+            const audioBlob = await response.blob();
+            if (requestId !== playbackRequestId) return;
+            activeAudioObjectUrl = URL.createObjectURL(audioBlob);
+            playableUrl = activeAudioObjectUrl;
+        }
+
+        audioPlayer.src = playableUrl;
+        audioPlayer.load();
+        await audioPlayer.play();
+
+        if (requestId !== playbackRequestId) return;
+        updatePlayerUI(song);
+        updatePlayButtons(true);
+        showPlaybackNotice(`Playing ${song.title || "song"}`);
+    } catch (error) {
+        if (requestId !== playbackRequestId) return;
+        console.error("Audio playback failed:", error);
+        updatePlayButtons(false);
+        showPlaybackNotice(`Couldn’t play ${song.title || "this song"}. ${error.message || "Check the audio URL and try again."}`);
+    }
 }
 
 
@@ -967,19 +1083,27 @@ document.addEventListener(
                     clearTimeout(
                         searchTimer
                     );
+                    searchRequestId++;
+                    const oldPanel = document.getElementById("searchResultsPanel");
+                    const oldGrid = document.getElementById("searchResultsGrid");
+                    if (oldPanel) oldPanel.hidden = true;
+                    if (oldGrid) oldGrid.replaceChildren();
 
 
                     searchTimer =
-                        setTimeout(
-                            () => {
-
-                                searchSongs(
-                                    searchInput.value
-                                );
-
-                            },
-                            300
-                        );
+                        setTimeout(() => {
+                            const query = searchInput.value.trim();
+                            if (!query) {
+                                searchRequestId++;
+                                searchResults = [];
+                                const panel = document.getElementById("searchResultsPanel");
+                                const grid = document.getElementById("searchResultsGrid");
+                                if (panel) panel.hidden = true;
+                                if (grid) grid.replaceChildren();
+                                return;
+                            }
+                            searchSongs(query);
+                        }, 300);
                 }
             );
         }
@@ -1569,6 +1693,7 @@ document.addEventListener(
             (event) => {
 
                 if (event.key === "Escape") {
+                    if (libraryView?.classList.contains("open")) closeLibrary();
 
                     /*
                      * Escape only minimizes
@@ -1593,6 +1718,114 @@ document.addEventListener(
            LOAD DATABASE SONGS
         ================================================= */
 
+        /* Volume controls stay in sync between compact and expanded players. */
+        let lastVolume = 0.7;
+        audioPlayer.volume = lastVolume;
+        const volumeSliders = document.querySelectorAll(".volume-slider");
+        const muteButtons = document.querySelectorAll(".volume-mute");
+        function syncVolumeUI() {
+            volumeSliders.forEach((slider) => {
+                slider.value = audioPlayer.volume;
+                const percent = audioPlayer.volume * 100;
+                slider.style.background = `linear-gradient(to right,#fff ${percent}%,#555 ${percent}%)`;
+            });
+            muteButtons.forEach((button) => {
+                const muted = audioPlayer.muted || audioPlayer.volume === 0;
+                button.textContent = muted ? "🔇" : "🔊";
+                button.setAttribute("aria-label", muted ? "Unmute" : "Mute");
+                button.setAttribute("aria-pressed", String(muted));
+            });
+        }
+        volumeSliders.forEach((slider) => slider.addEventListener("input", () => {
+            audioPlayer.volume = Number(slider.value);
+            audioPlayer.muted = false;
+            if (audioPlayer.volume > 0) lastVolume = audioPlayer.volume;
+            syncVolumeUI();
+        }));
+        muteButtons.forEach((button) => button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            if (audioPlayer.muted || audioPlayer.volume === 0) {
+                audioPlayer.muted = false;
+                audioPlayer.volume = lastVolume || 0.7;
+            } else {
+                lastVolume = audioPlayer.volume;
+                audioPlayer.muted = true;
+            }
+            syncVolumeUI();
+        }));
+        syncVolumeUI();
+
+        document.querySelectorAll(".volume").forEach((control) => control.addEventListener("click", (event) => event.stopPropagation()));
+
+        /* Full-screen list views for both home sections. */
+        const libraryView = document.getElementById("libraryView");
+        const libraryTitle = document.getElementById("libraryTitle");
+        const libraryList = document.getElementById("libraryList");
+        const libraryMinimize = document.getElementById("libraryMinimize");
+
+        function closeLibrary() {
+            libraryView?.classList.remove("open");
+            libraryView?.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("library-open");
+        }
+        function openLibrary(kind) {
+            if (!libraryView || !libraryList) return;
+            const recent = kind === "recent";
+            libraryTitle.textContent = recent ? "Recently played" : "Made for you";
+            const songs = recent
+                ? (recentlyPlayed.length ? recentlyPlayed : (searchResults.length ? searchResults : allSongs))
+                : allSongs;
+            libraryList.replaceChildren();
+            if (!songs.length) {
+                const empty = document.createElement("p");
+                empty.className = "library-empty";
+                empty.textContent = "No songs to show yet.";
+                libraryList.appendChild(empty);
+            }
+            songs.forEach((song, index) => {
+                const row = document.createElement("div");
+                row.className = "library-row";
+                const number = document.createElement("span");
+                number.className = "liked-number";
+                number.textContent = String(index + 1);
+                const cover = document.createElement("div");
+                cover.className = `album-small album-${(index % 4) + 1}`;
+                cover.textContent = "♫";
+                const info = document.createElement("div");
+                info.className = "song-info";
+                const title = document.createElement("h3");
+                title.textContent = song.title || "Unknown title";
+                const artist = document.createElement("p");
+                artist.textContent = song.artist || "Unknown artist";
+                info.append(title, artist);
+                const play = document.createElement("span");
+                play.className = "library-play";
+                play.textContent = "▶";
+                row.append(number, cover, info, play);
+                row.addEventListener("click", () => playSong(song));
+                libraryList.appendChild(row);
+            });
+            libraryView.classList.add("open");
+            libraryView.setAttribute("aria-hidden", "false");
+            document.body.classList.add("library-open");
+        }
+        document.querySelectorAll(".see-all[data-view]").forEach((button) => {
+            button.addEventListener("click", () => openLibrary(button.dataset.view));
+        });
+        libraryMinimize?.addEventListener("click", closeLibrary);
+        libraryView?.addEventListener("click", (event) => {
+            if (event.target === libraryView || event.target.matches("[data-close-library]")) closeLibrary();
+        });
+        document.querySelector(".hero-follow")?.addEventListener("click", (event) => {
+            const button = event.currentTarget;
+            button.textContent = button.textContent === "Follow" ? "Following" : "Follow";
+            button.classList.toggle("is-following");
+        });
+        const maximizePlayer = document.getElementById("maximizePlayer");
+        maximizePlayer?.addEventListener("click", (event) => {
+            event.stopPropagation();
+            openPlayer();
+        });
         loadSongs();
 
     }

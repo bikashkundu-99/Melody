@@ -9,6 +9,8 @@ public interface SongRepository extends JpaRepository<Song, Long> {
 
     List<Song> findByIsActiveTrue();
 
+    List<Song> findByArtistIgnoreCaseAndIsActiveTrueOrderByTitleAsc(String artist);
+
     List<Song> findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCaseOrAlbumContainingIgnoreCase(
             String title,
             String artist,
