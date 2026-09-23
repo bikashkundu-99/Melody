@@ -55,7 +55,7 @@ public class LibraryController {
 
     @GetMapping("/recent")
     public List<Song> getRecentlyPlayed(@AuthenticationPrincipal User user) {
-        return recentlyPlayed.findTop100ByUser_IdOrderByPlayedAtDesc(user.getId())
+        return recentlyPlayed.findByUser_IdOrderByPlayedAtDesc(user.getId())
                 .stream().map(RecentlyPlayed::getSong).toList();
     }
 

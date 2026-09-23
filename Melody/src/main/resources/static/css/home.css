@@ -989,6 +989,26 @@ body { background: #0b1427; color:#f4f7fb; }
 .recent-card .song-info strong { overflow:hidden; color:#f4f7fb; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
 .recent-card .song-info span { overflow:hidden; color:#91a0b7; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
 .recent-card .album-small { background-size:cover; background-position:center; }
+.sidebar-playlists { display:flex; flex-direction:column; gap:3px; max-height:38vh; overflow:auto; }
+.sidebar-playlist { width:100%; border:0; background:transparent; text-align:left; font:inherit; }
+.sidebar-playlists-empty { padding:7px 12px; color:#75839a; font-size:11px; }
+.player-artist-link { display:block; max-width:190px; overflow:hidden; border:0; padding:3px 0 0; background:transparent; color:#91a0b7; font:inherit; font-size:11px; text-align:left; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+.player-artist-link:hover { color:var(--teal); text-decoration:underline; }
+.player-save { width:auto; min-width:34px; height:26px; flex:0 0 auto; padding:0 5px; border:0; border-radius:14px; background:transparent; color:#aebbd0; font-size:11px; line-height:1; cursor:pointer; }
+.player-save:hover { background:#20334d; color:var(--teal); }
+.save-playlist-modal { position:relative; width:min(440px,100%); max-height:80vh; overflow:auto; padding:26px; border:1px solid #2b405b; border-radius:12px; background:#142139; box-shadow:0 24px 80px #0008; }
+.save-playlist-modal h2 { margin-bottom:7px; font-size:22px; }
+.save-playlist-modal > p { margin-bottom:18px; color:#91a0b7; font-size:13px; }
+.save-playlist-close { position:absolute; top:17px; right:17px; }
+.save-playlist-options { display:flex; flex-direction:column; gap:5px; max-height:38vh; overflow:auto; margin-bottom:16px; }
+.save-playlist-option { padding:12px 14px; border:0; border-radius:7px; background:#1b2b44; color:#eef4fc; text-align:left; font:inherit; cursor:pointer; }
+.save-playlist-option:hover { background:#263d5d; color:var(--teal); }
+.library-playlist-row { display:flex; width:100%; justify-content:space-between; align-items:center; gap:20px; margin:5px 0; padding:15px; border:1px solid #263853; border-radius:8px; background:#17243b; color:#eef4fc; text-align:left; font:inherit; cursor:pointer; }
+.library-playlist-row:hover { background:#20314b; }
+.library-playlist-row span { color:#91a0b7; font-size:12px; }
+.library-back-link { margin:0 0 14px; border:0; background:transparent; color:var(--teal); font:inherit; cursor:pointer; }
+@media (max-width:800px) { .sidebar-playlist span:not(.nav-icon) { display:none; } .sidebar-playlist { justify-content:center; } .player-artist-link { max-width:130px; } }
+@media (max-width:600px) { .player-save { width:24px; min-width:24px; padding:0; font-size:0; } .player-save::before { content:"＋"; font-size:18px; } }
 @media (max-width:600px) { .player { height:74px; padding:0 10px; } .now-playing { width:106px; gap:7px; } .player-cover { width:38px; height:38px; } .now-playing h4 { font-size:11px; } .controls { min-width:0; flex:1; } .compact-controls-row { gap:8px; } .compact-progress { gap:4px; font-size:8px; } .compact-progress span { min-width:24px; } .maximize-player { flex-basis:25px; width:25px; height:25px; font-size:17px; padding:0; } }
 
 /* Put the expanded-player minimize action beside the bottom player controls. */

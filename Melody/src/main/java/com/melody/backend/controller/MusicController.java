@@ -40,6 +40,12 @@ public class MusicController {
                 );
     }
 
+    @GetMapping("/artist")
+    public List<Song> getSongsByArtist(@RequestParam String name) {
+        if (name == null || name.isBlank()) return List.of();
+        return songRepository.findByArtistIgnoreCaseAndIsActiveTrueOrderByTitleAsc(name.trim());
+    }
+
     @GetMapping("/{id}")
     public Song getSong(@PathVariable Long id) {
 

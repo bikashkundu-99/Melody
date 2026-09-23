@@ -11,6 +11,10 @@ let searchRequestId = 0;
 let currentSongIndex = -1;
 let currentSong = null;
 let recentlyPlayed = [];
+let playlists = [];
+let likedSongs = [];
+let likedSongIds = new Set();
+let pendingSaveSongId = null;
 
 
 /* =====================================================
@@ -227,6 +231,29 @@ function displaySearchResults(songs) {
     });
 }
 
+async function apiCall(path, options = {}) {
+    const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
+    if (options.body !== undefined) headers["Content-Type"] = "application/json";
+    const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers,
+        body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    });
+
+    if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("melody_token");
+        localStorage.removeItem("melody_user");
+        window.location.href = "index.html";
+        throw new Error("Your session has expired. Please sign in again.");
+    }
+    if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Request failed (${response.status})`);
+    }
+    if (response.status === 204) return null;
+    return response.json();
+}
+
 function renderRecentlyPlayed() {
     const grid = document.getElementById("recentGrid");
     if (!grid) return;
@@ -240,7 +267,8 @@ function renderRecentlyPlayed() {
         return;
     }
 
-    recentlyPlayed.slice(0, 4).forEach((song, index) => {
+    const uniqueRecentSongs = [...new Map(recentlyPlayed.map(song => [song.id, song])).values()].slice(0, 4);
+    uniqueRecentSongs.forEach((song, index) => {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "recent-card";
@@ -467,12 +495,6 @@ async function playSong(song) {
 
 
     currentSong = song;
-    if (typeof recentlyPlayed !== "undefined") {
-        const previousIndex = recentlyPlayed.findIndex(item => item.id === song.id);
-        if (previousIndex !== -1) recentlyPlayed.splice(previousIndex, 1);
-        recentlyPlayed.unshift(song);
-        renderRecentlyPlayed();
-    }
 
 
     /*
@@ -557,9 +579,13 @@ async function playSong(song) {
         await audioPlayer.play();
 
         if (requestId !== playbackRequestId) return;
+        recentlyPlayed = [song, ...recentlyPlayed];
+        renderRecentlyPlayed();
         updatePlayerUI(song);
         updatePlayButtons(true);
         showPlaybackNotice(`Playing ${song.title || "song"}`);
+        apiCall(`/library/recent/${song.id}`, { method: "POST" })
+            .catch(error => console.error("Could not save listening history:", error));
     } catch (error) {
         if (requestId !== playbackRequestId) return;
         console.error("Audio playback failed:", error);
@@ -596,10 +622,7 @@ function updatePlayerUI(song) {
             ".now-playing h4"
         );
 
-    const playerArtist =
-        document.querySelector(
-            ".now-playing p"
-        );
+    const playerArtist = document.getElementById("compactArtist");
 
 
     if (playerTitle) {
@@ -609,6 +632,7 @@ function updatePlayerUI(song) {
 
     if (playerArtist) {
         playerArtist.textContent = artist;
+        playerArtist.title = `See ${artist}'s songs`;
     }
 
 
@@ -656,10 +680,7 @@ function updatePlayerUI(song) {
             ".expanded-song-info h2"
         );
 
-    const expandedArtist =
-        document.querySelector(
-            ".expanded-song-info p"
-        );
+    const expandedArtist = document.getElementById("expandedArtist");
 
 
     if (expandedTitle) {
@@ -669,6 +690,7 @@ function updatePlayerUI(song) {
 
     if (expandedArtist) {
         expandedArtist.textContent = artist;
+        expandedArtist.title = `See ${artist}'s songs`;
     }
 
 
@@ -705,8 +727,88 @@ function updatePlayerUI(song) {
             expandedCover.textContent = "♫";
         }
     }
+    updatePlayerLikeButtons(likedSongIds.has(song.id));
 }
 
+
+function updatePlayerLikeButtons(isLiked) {
+    ["playerLikeButton", "expandedLikeButton"].forEach(id => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        button.classList.toggle("liked", isLiked);
+        button.textContent = isLiked ? "♥" : "♡";
+        button.setAttribute("aria-pressed", String(isLiked));
+    });
+}
+
+function renderLikedSongs() {
+    const list = document.getElementById("likedSongsList");
+    if (!list) return;
+    list.replaceChildren();
+    if (!likedSongs.length) {
+        const empty = document.createElement("p");
+        empty.className = "library-empty";
+        empty.textContent = "Songs you like will appear here.";
+        list.appendChild(empty);
+        return;
+    }
+    likedSongs.forEach((song, index) => {
+        const row = document.createElement("div");
+        row.className = "liked-row";
+        const number = document.createElement("span");
+        number.className = "liked-number";
+        number.textContent = String(index + 1);
+        const cover = document.createElement("div");
+        cover.className = `liked-cover album-${(index % 4) + 1}`;
+        cover.textContent = "♫";
+        const info = document.createElement("div");
+        info.className = "liked-song";
+        const title = document.createElement("h3");
+        title.textContent = song.title || "Unknown title";
+        const artist = document.createElement("p");
+        artist.textContent = song.artist || "Unknown artist";
+        info.append(title, artist);
+        const unlike = document.createElement("button");
+        unlike.type = "button";
+        unlike.className = "liked-heart active";
+        unlike.textContent = "♥";
+        unlike.setAttribute("aria-label", `Unlike ${song.title || "song"}`);
+        unlike.addEventListener("click", async event => {
+            event.stopPropagation();
+            try {
+                await apiCall(`/library/liked/${song.id}`, { method: "DELETE" });
+                await refreshLikedSongs();
+            } catch (error) {
+                showPlaybackNotice(error.message || "Could not remove liked song.");
+            }
+        });
+        row.append(number, cover, info, unlike);
+        row.addEventListener("click", () => playSong(song));
+        list.appendChild(row);
+    });
+}
+
+async function refreshLikedSongs() {
+    likedSongs = await apiCall("/library/liked");
+    likedSongIds = new Set(likedSongs.map(song => song.id));
+    renderLikedSongs();
+    updatePlayerLikeButtons(currentSong ? likedSongIds.has(currentSong.id) : false);
+}
+
+async function toggleCurrentSongLike() {
+    if (!currentSong) {
+        showPlaybackNotice("Play a song before liking it.");
+        return;
+    }
+    const liked = likedSongIds.has(currentSong.id);
+    try {
+        await apiCall(`/library/liked/${currentSong.id}`, { method: liked ? "DELETE" : "POST" });
+        await refreshLikedSongs();
+        showPlaybackNotice(liked ? "Removed from Liked Songs" : "Added to Liked Songs");
+    } catch (error) {
+        showPlaybackNotice(error.message || "Could not update liked songs.");
+    }
+}
 
 /* =====================================================
    PLAY / PAUSE
@@ -1310,38 +1412,6 @@ document.addEventListener(
            LIKE BUTTON
         ================================================= */
 
-        let liked = false;
-
-
-        function updateLikeButtons() {
-
-            if (playerLikeButton) {
-
-                playerLikeButton.classList.toggle(
-                    "liked",
-                    liked
-                );
-
-
-                playerLikeButton.textContent =
-                    liked ? "♥" : "♡";
-            }
-
-
-            if (expandedLikeButton) {
-
-                expandedLikeButton.classList.toggle(
-                    "liked",
-                    liked
-                );
-
-
-                expandedLikeButton.textContent =
-                    liked ? "♥" : "♡";
-            }
-        }
-
-
         [
             playerLikeButton,
             expandedLikeButton
@@ -1359,9 +1429,7 @@ document.addEventListener(
 
                         event.stopPropagation();
 
-                        liked = !liked;
-
-                        updateLikeButtons();
+                        toggleCurrentSongLike();
                     }
                 );
             }
@@ -1440,7 +1508,10 @@ document.addEventListener(
 
             cancelPlaylist.addEventListener(
                 "click",
-                closePlaylistModal
+                () => {
+                    pendingSaveSongId = null;
+                    closePlaylistModal();
+                }
             );
         }
 
@@ -1449,7 +1520,7 @@ document.addEventListener(
 
             createPlaylist.addEventListener(
                 "click",
-                () => {
+                async () => {
 
                     const nameInput =
                         document.getElementById(
@@ -1480,30 +1551,29 @@ document.addEventListener(
                     }
 
 
-                    console.log(
-                        "Playlist created:",
-                        {
-                            name: name,
-
-                            description:
-                                descriptionInput.value.trim(),
-
-                            privacy:
-                                privacyValue.textContent,
-
-                            collaborate:
-                                collaborateToggle.classList.contains(
-                                    "on"
-                                )
+                    try {
+                        const playlist = await apiCall("/playlists", {
+                            method: "POST",
+                            body: {
+                                name,
+                                description: descriptionInput.value.trim(),
+                                privacy: privacyValue.textContent,
+                                collaborate: collaborateToggle.classList.contains("on")
+                            }
+                        });
+                        const songToSave = pendingSaveSongId;
+                        pendingSaveSongId = null;
+                        if (songToSave) {
+                            await apiCall(`/playlists/${playlist.id}/songs/${songToSave}`, { method: "POST" });
                         }
-                    );
-
-
-                    nameInput.value = "";
-
-                    descriptionInput.value = "";
-
-                    closePlaylistModal();
+                        nameInput.value = "";
+                        descriptionInput.value = "";
+                        closePlaylistModal();
+                        await refreshPlaylists();
+                        showPlaybackNotice(`Created playlist “${playlist.name}”`);
+                    } catch (error) {
+                        showPlaybackNotice(error.message || "Could not create playlist.");
+                    }
                 }
             );
         }
@@ -1583,6 +1653,7 @@ document.addEventListener(
             document.body.classList.add(
                 "modal-open"
             );
+            refreshLikedSongs().catch(error => showPlaybackNotice(error.message || "Could not load liked songs."));
         }
 
 
@@ -1694,6 +1765,11 @@ document.addEventListener(
 
                 if (event.key === "Escape") {
                     if (libraryView?.classList.contains("open")) closeLibrary();
+                    if (saveToPlaylistModal?.classList.contains("open")) {
+                        saveToPlaylistModal.classList.remove("open");
+                        saveToPlaylistModal.setAttribute("aria-hidden", "true");
+                        document.body.classList.remove("modal-open");
+                    }
 
                     /*
                      * Escape only minimizes
@@ -1757,30 +1833,30 @@ document.addEventListener(
 
         document.querySelectorAll(".volume").forEach((control) => control.addEventListener("click", (event) => event.stopPropagation()));
 
-        /* Full-screen list views for both home sections. */
+        /* Persistent library, playlists, and artist discography views. */
         const libraryView = document.getElementById("libraryView");
         const libraryTitle = document.getElementById("libraryTitle");
         const libraryList = document.getElementById("libraryList");
         const libraryMinimize = document.getElementById("libraryMinimize");
+        const userPlaylists = document.getElementById("userPlaylists");
+        const saveToPlaylistModal = document.getElementById("saveToPlaylistModal");
+        const savePlaylistOptions = document.getElementById("savePlaylistOptions");
 
-        function closeLibrary() {
-            libraryView?.classList.remove("open");
-            libraryView?.setAttribute("aria-hidden", "true");
-            document.body.classList.remove("library-open");
+        function showLibrary(title) {
+            libraryTitle.textContent = title;
+            libraryView.classList.add("open");
+            libraryView.setAttribute("aria-hidden", "false");
+            document.body.classList.add("library-open");
         }
-        function openLibrary(kind) {
-            if (!libraryView || !libraryList) return;
-            const recent = kind === "recent";
-            libraryTitle.textContent = recent ? "Recently played" : "Made for you";
-            const songs = recent
-                ? (recentlyPlayed.length ? recentlyPlayed : (searchResults.length ? searchResults : allSongs))
-                : allSongs;
+
+        function renderLibrarySongs(songs) {
             libraryList.replaceChildren();
             if (!songs.length) {
                 const empty = document.createElement("p");
                 empty.className = "library-empty";
                 empty.textContent = "No songs to show yet.";
                 libraryList.appendChild(empty);
+                return;
             }
             songs.forEach((song, index) => {
                 const row = document.createElement("div");
@@ -1791,6 +1867,10 @@ document.addEventListener(
                 const cover = document.createElement("div");
                 cover.className = `album-small album-${(index % 4) + 1}`;
                 cover.textContent = "♫";
+                if (song.thumbnailUrl) {
+                    cover.style.backgroundImage = `url("${getFullUrl(song.thumbnailUrl)}")`;
+                    cover.style.backgroundSize = "cover";
+                }
                 const info = document.createElement("div");
                 info.className = "song-info";
                 const title = document.createElement("h3");
@@ -1805,12 +1885,178 @@ document.addEventListener(
                 row.addEventListener("click", () => playSong(song));
                 libraryList.appendChild(row);
             });
-            libraryView.classList.add("open");
-            libraryView.setAttribute("aria-hidden", "false");
-            document.body.classList.add("library-open");
+        }
+
+        async function openPlaylist(playlistId) {
+            try {
+                const detail = await apiCall(`/playlists/${playlistId}`);
+                const back = document.createElement("button");
+                back.type = "button";
+                back.className = "library-back-link";
+                back.textContent = "‹ My Library";
+                back.addEventListener("click", openMyLibrary);
+                renderLibrarySongs(detail.songs || []);
+                libraryList.prepend(back);
+                showLibrary(detail.playlist.name);
+            } catch (error) {
+                showPlaybackNotice(error.message || "Could not open playlist.");
+            }
+        }
+
+        async function refreshPlaylists() {
+            playlists = await apiCall("/playlists");
+            userPlaylists.replaceChildren();
+            if (!playlists.length) {
+                const empty = document.createElement("p");
+                empty.className = "sidebar-playlists-empty";
+                empty.textContent = "No playlists yet";
+                userPlaylists.appendChild(empty);
+            }
+            playlists.forEach(playlist => {
+                const item = document.createElement("button");
+                item.type = "button";
+                item.className = "nav-item sidebar-playlist";
+                item.title = playlist.name;
+                item.innerHTML = '<span class="nav-icon">♫</span><span></span>';
+                item.querySelector("span:last-child").textContent = playlist.name;
+                item.addEventListener("click", () => openPlaylist(playlist.id));
+                userPlaylists.appendChild(item);
+            });
+        }
+
+        async function openMyLibrary() {
+            try {
+                await refreshPlaylists();
+                libraryList.replaceChildren();
+                if (!playlists.length) {
+                    const empty = document.createElement("p");
+                    empty.className = "library-empty";
+                    empty.textContent = "Create a playlist and it will appear here.";
+                    libraryList.appendChild(empty);
+                }
+                playlists.forEach(playlist => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "library-playlist-row";
+                    const title = document.createElement("strong");
+                    title.textContent = playlist.name;
+                    const details = document.createElement("span");
+                    details.textContent = `${playlist.songCount} ${playlist.songCount === 1 ? "song" : "songs"}`;
+                    item.append(title, details);
+                    item.addEventListener("click", () => openPlaylist(playlist.id));
+                    libraryList.appendChild(item);
+                });
+                showLibrary("My Library");
+            } catch (error) {
+                showPlaybackNotice(error.message || "Could not load your library.");
+            }
+        }
+
+        async function openArtistSongs(artistName) {
+            if (!artistName) return;
+            try {
+                const songs = await apiCall(`/songs/artist?name=${encodeURIComponent(artistName)}`);
+                renderLibrarySongs(songs);
+                showLibrary(`${artistName} songs`);
+            } catch (error) {
+                showPlaybackNotice(error.message || "Could not load artist songs.");
+            }
+        }
+
+        async function openLibrary(kind) {
+            if (!libraryView || !libraryList) return;
+            try {
+                if (kind === "recent") {
+                    recentlyPlayed = await apiCall("/library/recent");
+                    renderRecentlyPlayed();
+                    renderLibrarySongs(recentlyPlayed);
+                    showLibrary("Recently played");
+                } else {
+                    renderLibrarySongs(allSongs);
+                    showLibrary("Made for you");
+                }
+            } catch (error) {
+                showPlaybackNotice(error.message || "Could not load songs.");
+            }
+        }
+
+        async function openSaveToPlaylist() {
+            if (!currentSong) {
+                showPlaybackNotice("Play a song before saving it to a playlist.");
+                return;
+            }
+            try {
+                await refreshPlaylists();
+                document.getElementById("savePlaylistSongTitle").textContent = currentSong.title || "Current song";
+                savePlaylistOptions.replaceChildren();
+                if (!playlists.length) {
+                    const empty = document.createElement("p");
+                    empty.className = "library-empty";
+                    empty.textContent = "You don’t have a playlist yet.";
+                    savePlaylistOptions.appendChild(empty);
+                }
+                playlists.forEach(playlist => {
+                    const option = document.createElement("button");
+                    option.type = "button";
+                    option.className = "save-playlist-option";
+                    option.textContent = playlist.name;
+                    option.addEventListener("click", async () => {
+                        try {
+                            await apiCall(`/playlists/${playlist.id}/songs/${currentSong.id}`, { method: "POST" });
+                            saveToPlaylistModal.classList.remove("open");
+                            saveToPlaylistModal.setAttribute("aria-hidden", "true");
+                            document.body.classList.remove("modal-open");
+                            await refreshPlaylists();
+                            showPlaybackNotice(`Saved to “${playlist.name}”`);
+                        } catch (error) {
+                            showPlaybackNotice(error.message || "Could not save song.");
+                        }
+                    });
+                    savePlaylistOptions.appendChild(option);
+                });
+                saveToPlaylistModal.classList.add("open");
+                saveToPlaylistModal.setAttribute("aria-hidden", "false");
+                document.body.classList.add("modal-open");
+            } catch (error) {
+                showPlaybackNotice(error.message || "Could not load playlists.");
+            }
+        }
+
+        function closeLibrary() {
+            libraryView?.classList.remove("open");
+            libraryView?.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("library-open");
         }
         document.querySelectorAll(".see-all[data-view]").forEach((button) => {
             button.addEventListener("click", () => openLibrary(button.dataset.view));
+        });
+        document.getElementById("myLibraryNav")?.addEventListener("click", event => {
+            event.preventDefault();
+            openMyLibrary();
+        });
+        document.querySelectorAll(".player-artist-link").forEach(button => {
+            button.addEventListener("click", event => {
+                event.stopPropagation();
+                if (currentSong?.artist) openArtistSongs(currentSong.artist);
+            });
+        });
+        ["compactSaveButton", "expandedSaveButton"].forEach(id => {
+            document.getElementById(id)?.addEventListener("click", event => {
+                event.stopPropagation();
+                openSaveToPlaylist();
+            });
+        });
+        document.getElementById("closeSavePlaylist")?.addEventListener("click", () => {
+            saveToPlaylistModal.classList.remove("open");
+            saveToPlaylistModal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("modal-open");
+        });
+        document.getElementById("newPlaylistFromSave")?.addEventListener("click", () => {
+            pendingSaveSongId = currentSong?.id || null;
+            saveToPlaylistModal.classList.remove("open");
+            saveToPlaylistModal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("modal-open");
+            openPlaylistModal();
         });
         libraryMinimize?.addEventListener("click", closeLibrary);
         libraryView?.addEventListener("click", (event) => {
@@ -1827,6 +2073,11 @@ document.addEventListener(
             openPlayer();
         });
         loadSongs();
+        refreshLikedSongs().catch(error => console.error("Could not load liked songs:", error));
+        refreshPlaylists().catch(error => console.error("Could not load playlists:", error));
+        apiCall("/library/recent")
+            .then(songs => { recentlyPlayed = songs; renderRecentlyPlayed(); })
+            .catch(error => console.error("Could not load listening history:", error));
 
     }
 );

@@ -194,6 +194,12 @@ BEGIN
 END;
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_liked_songs_user_liked_at')
+BEGIN
+    CREATE INDEX IX_liked_songs_user_liked_at ON liked_songs(user_id, liked_at DESC);
+END;
+GO
+
 -- =====================================================
 -- PLAYLISTS AND PLAYLIST SONGS
 -- =====================================================
@@ -211,6 +217,12 @@ BEGIN
         created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         CONSTRAINT FK_playlists_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_playlists_user_created_at')
+BEGIN
+    CREATE INDEX IX_playlists_user_created_at ON playlists(user_id, created_at DESC);
 END;
 GO
 

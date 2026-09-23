@@ -10,6 +10,7 @@ import com.melody.backend.entity.User;
 import com.melody.backend.repository.PlaylistRepository;
 import com.melody.backend.repository.PlaylistSongRepository;
 import com.melody.backend.repository.SongRepository;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +42,7 @@ public class PlaylistController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PlaylistSummary createPlaylist(@AuthenticationPrincipal User user,
-                                          @RequestBody CreatePlaylistRequest request) {
+                                          @Valid @RequestBody CreatePlaylistRequest request) {
         if (request.name() == null || request.name().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist name is required");
         }

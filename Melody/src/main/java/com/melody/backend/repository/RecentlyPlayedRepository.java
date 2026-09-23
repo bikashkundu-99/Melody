@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface RecentlyPlayedRepository extends JpaRepository<RecentlyPlayed, Long> {
     @EntityGraph(attributePaths = "song")
-    List<RecentlyPlayed> findTop100ByUser_IdOrderByPlayedAtDesc(Long userId);
+    List<RecentlyPlayed> findByUser_IdOrderByPlayedAtDesc(Long userId);
 }

@@ -18,22 +18,20 @@
         <div class="nav-icon">⌂</div>
         <span>Home</span>
     </div>
+    <div class="nav-item" id="createPlaylistNav">
+        <div class="nav-icon">＋</div>
+        <span>Create Playlist</span>
+    </div>
+
     <div class="menu-title">Your Music</div>
     <div class="nav-item" id="likedSongsNav">
         <div class="nav-icon">♡</div>
         <span>Liked Songs</span>
     </div>
-    <button class="nav-item create-playlist-nav" id="createPlaylistNav" type="button">
-        <span class="nav-icon">＋</span>
-        <span>Create playlist</span>
-    </button>
-    <div class="menu-title">Your Playlists</div>
-    <div class="sidebar-playlists" id="userPlaylists"></div>
 </aside>
 
 <main class="main">
     <header class="header">
-        <nav class="top-nav" aria-label="Main sections"><a class="active" href="#homeContent" id="myLibraryNav">My Library</a></nav>
         <div class="search">
             <span class="search-icon">⌕</span>
             <input type="text" id="searchInput" placeholder="Search songs, artists, albums...">
@@ -43,27 +41,50 @@
             <div class="profile" id="profileButton" onclick="openAccountPage()">B</div>
         </div>
     </header>
-    <section class="search-results-panel" id="searchResultsPanel" aria-live="polite" hidden>
-        <h2>Search results</h2>
-        <div class="search-results-grid" id="searchResultsGrid"></div>
-    </section>
-    <div class="content" id="homeContent">
 
+    <div class="content" id="homeContent">
         <section class="section">
             <div class="section-header">
                 <h2>Recently played</h2>
-                <button class="see-all" type="button" data-view="recent">See all</button>
+                <span class="see-all">See all</span>
             </div>
 
-            <div class="recent-grid" id="recentGrid">
-                <p class="recent-empty">Play a song and it will appear here.</p>
+            <div class="recent-grid">
+                <div class="recent-card">
+                    <div class="album-small album-1">♫</div>
+                    <div class="song-info">
+                        <h3>Blinding Lights</h3>
+                        <p>The Weeknd</p>
+                    </div>
+                </div>
+                <div class="recent-card">
+                    <div class="album-small album-2">♫</div>
+                    <div class="song-info">
+                        <h3>Starboy</h3>
+                        <p>The Weeknd</p>
+                    </div>
+                </div>
+                <div class="recent-card">
+                    <div class="album-small album-3">♫</div>
+                    <div class="song-info">
+                        <h3>Night Changes</h3>
+                        <p>One Direction</p>
+                    </div>
+                </div>
+                <div class="recent-card">
+                    <div class="album-small album-4">♫</div>
+                    <div class="song-info">
+                        <h3>Perfect</h3>
+                        <p>Ed Sheeran</p>
+                    </div>
+                </div>
             </div>
         </section>
 
         <section class="section">
             <div class="section-header">
                 <h2>Made for you</h2>
-                <button class="see-all" type="button" data-view="made-for-you">See all</button>
+                <span class="see-all">See all</span>
             </div>
 
             <div class="music-grid">
@@ -112,61 +133,45 @@
     </div>
 </main>
 
-<section class="library-view" id="libraryView" aria-hidden="true" aria-labelledby="libraryTitle">
-    <div class="library-backdrop" data-close-library></div>
-    <div class="library-content" role="dialog" aria-modal="true">
-        <button class="library-minimize" id="libraryMinimize" type="button" aria-label="Close list">×</button>
-        <p class="library-eyebrow">YOUR MUSIC</p>
-        <h1 id="libraryTitle">Recently played</h1>
-        <div class="library-list" id="libraryList"></div>
-    </div>
-</section>
-
 <!-- ================= COMPACT PLAYER ================= -->
 <div class="player" id="playerBar" role="button" tabindex="0" aria-label="Open music player">
     <div class="now-playing">
         <div class="player-cover">♫</div>
         <div>
-            <h4>No song selected</h4>
-            <button class="player-artist-link" id="compactArtist" type="button">Choose a song to start listening</button>
+            <h4>Blinding Lights</h4>
+            <p>The Weeknd</p>
         </div>
     </div>
 
     <div class="controls">
-        <div class="compact-controls-row">
-            <div class="control player-control" aria-label="Previous song">◀</div>
-            <div class="play-main player-control" aria-label="Play">▶</div>
-            <div class="control player-control" aria-label="Next song">▶</div>
-            <button class="like-player player-control" id="playerLikeButton" type="button" aria-label="Like song">♡</button>
-            <button class="player-save" id="compactSaveButton" type="button" aria-label="Save to playlist" title="Save to playlist">Save</button>
-        </div>
-        <div class="compact-progress" aria-label="Song progress">
-            <span class="current-time">0:00</span>
-            <input class="seek-slider" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek through song">
-            <span class="duration-time">0:00</span>
-        </div>
+        <div class="control player-control">◀</div>
+        <div class="play-main player-control">▶</div>
+        <div class="control player-control">▶</div>
+        <button class="like-player player-control" id="playerLikeButton" type="button" aria-label="Like song">♡</button>
     </div>
-    <div class="volume" aria-label="Volume controls">
-        <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false">🔊</button>
-        <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
+
+    <div class="volume player-control">
+        <span>🔊</span>
+        <div class="volume-line"></div>
     </div>
-    <button class="maximize-player" id="maximizePlayer" type="button" aria-label="Open full screen player" title="Expand player">⛶</button>
 </div>
 
 <!-- ================= EXPANDED PLAYER ================= -->
 <div class="player-expanded" id="expandedPlayer" aria-hidden="true">
+    <button class="player-collapse" id="collapsePlayer" type="button" aria-label="Minimize player">⌄</button>
+
     <div class="expanded-content">
         <div class="expanded-cover">♫</div>
 
         <div class="expanded-song-info">
-            <h2>No song selected</h2>
-            <button class="player-artist-link" id="expandedArtist" type="button">Choose a song to start listening</button>
+            <h2>Blinding Lights</h2>
+            <p>The Weeknd</p>
         </div>
 
         <div class="expanded-progress">
-            <span class="current-time">0:00</span>
-            <input class="seek-slider expanded-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek through song">
-            <span class="duration-time">0:00</span>
+            <span>0:00</span>
+            <div class="progress-track"><div class="progress-fill"></div></div>
+            <span>4:21</span>
         </div>
 
         <div class="expanded-controls">
@@ -174,14 +179,8 @@
             <button type="button" class="expanded-play player-control" aria-label="Play">▶</button>
             <button type="button" class="expanded-control player-control" aria-label="Next song">▶</button>
             <button type="button" class="expanded-like player-control" id="expandedLikeButton" aria-label="Like song">♡</button>
-            <button type="button" class="player-save" id="expandedSaveButton" aria-label="Save to playlist" title="Save to playlist">Save</button>
-        </div>
-        <div class="expanded-volume" aria-label="Volume controls">
-            <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false">🔊</button>
-            <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
         </div>
     </div>
-    <button class="player-collapse" id="collapsePlayer" type="button" aria-label="Minimize player" title="Minimize player">⤡</button>
 </div>
 
 <!-- ================= CREATE PLAYLIST MODAL ================= -->
@@ -218,17 +217,6 @@
     </div>
 </div>
 
-<!-- ================= SAVE TO PLAYLIST ================= -->
-<div class="modal-overlay" id="saveToPlaylistModal" aria-hidden="true">
-    <div class="save-playlist-modal" role="dialog" aria-modal="true" aria-labelledby="savePlaylistTitle">
-        <button class="close-panel save-playlist-close" id="closeSavePlaylist" type="button" aria-label="Close">×</button>
-        <h2 id="savePlaylistTitle">Save to playlist</h2>
-        <p id="savePlaylistSongTitle">Choose a playlist for this song.</p>
-        <div id="savePlaylistOptions" class="save-playlist-options"></div>
-        <button class="create-button" id="newPlaylistFromSave" type="button">＋ New playlist</button>
-    </div>
-</div>
-
 <!-- ================= LIKED SONGS PANEL ================= -->
 <div class="modal-overlay" id="likedSongsModal" aria-hidden="true">
     <div class="liked-modal" role="dialog" aria-modal="true" aria-labelledby="likedSongsTitle">
@@ -241,8 +229,46 @@
             <button class="close-panel" id="closeLikedSongs" type="button" aria-label="Close">×</button>
         </div>
 
-        <div class="liked-list" id="likedSongsList">
-            <p class="library-empty">Songs you like will appear here.</p>
+        <div class="liked-list">
+            <div class="liked-row">
+                <div class="liked-number">1</div>
+                <div class="liked-cover gradient-1">♫</div>
+                <div class="liked-song">
+                    <h3>Blinding Lights</h3>
+                    <p>The Weeknd</p>
+                </div>
+                <button class="liked-heart active" type="button">♥</button>
+            </div>
+
+            <div class="liked-row">
+                <div class="liked-number">2</div>
+                <div class="liked-cover gradient-2">♫</div>
+                <div class="liked-song">
+                    <h3>Starboy</h3>
+                    <p>The Weeknd</p>
+                </div>
+                <button class="liked-heart active" type="button">♥</button>
+            </div>
+
+            <div class="liked-row">
+                <div class="liked-number">3</div>
+                <div class="liked-cover gradient-3">♫</div>
+                <div class="liked-song">
+                    <h3>Night Changes</h3>
+                    <p>One Direction</p>
+                </div>
+                <button class="liked-heart active" type="button">♥</button>
+            </div>
+
+            <div class="liked-row">
+                <div class="liked-number">4</div>
+                <div class="liked-cover gradient-4">♫</div>
+                <div class="liked-song">
+                    <h3>Perfect</h3>
+                    <p>Ed Sheeran</p>
+                </div>
+                <button class="liked-heart active" type="button">♥</button>
+            </div>
         </div>
     </div>
 </div>
