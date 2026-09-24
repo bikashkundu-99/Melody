@@ -43,7 +43,7 @@ public class MusicController {
     @GetMapping("/artist")
     public List<Song> getSongsByArtist(@RequestParam String name) {
         if (name == null || name.isBlank()) return List.of();
-        return songRepository.findByArtistIgnoreCaseAndIsActiveTrueOrderByTitleAsc(name.trim());
+        return songRepository.findByArtistContainingIgnoreCaseAndIsActiveTrueOrderByTitleAsc(name.trim());
     }
 
     @GetMapping("/{id}")

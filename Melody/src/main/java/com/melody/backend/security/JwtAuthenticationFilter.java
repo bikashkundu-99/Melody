@@ -71,7 +71,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         User user =
                 userRepository
-                        .findByEmail(email)
+                        .findByEmailIgnoreCase(email)
                         .orElse(null);
 
         if (user != null &&

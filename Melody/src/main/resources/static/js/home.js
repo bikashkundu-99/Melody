@@ -14,6 +14,9 @@ let repeatMode = "off";
 let currentSong = null;
 let userSelectedSongThisSession = false;
 let recentlyPlayed = [];
+let artistDirectory = [];
+let artistDirectoryLoaded = false;
+let artistDirectoryLoadFailed = false;
 let playlists = [];
 let likedSongs = [];
 let likedSongIds = new Set();
@@ -148,12 +151,6 @@ async function getDisplayThumbnailUrl(source) {
 
     if (!thumbnailCache.has(target.href)) {
         const request = fetch(target.href, { headers: getAuthHeaders() }).then(async response => {
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem("melody_token");
-                localStorage.removeItem("melody_user");
-                window.location.href = "index.html";
-                throw new Error("Image request is unauthorized.");
-            }
             if (!response.ok) throw new Error(`Image request failed (${response.status})`);
             const contentType = response.headers.get("content-type") || "";
             if (contentType && !contentType.startsWith("image/")) {
@@ -236,8 +233,7 @@ async function searchSongs(query) {
             headers: getAuthHeaders()
         });
 
-        if (response.status === 401 ||
-            response.status === 403) {
+        if (response.status === 401) {
 
             console.error("Authentication failed.");
 
@@ -290,8 +286,7 @@ async function loadSongs() {
             }
         );
 
-        if (response.status === 401 ||
-            response.status === 403) {
+        if (response.status === 401) {
 
             localStorage.removeItem("melody_token");
             localStorage.removeItem("melody_user");
@@ -398,7 +393,7 @@ async function apiCall(path, options = {}) {
         body: options.body === undefined ? undefined : JSON.stringify(options.body)
     });
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
         localStorage.removeItem("melody_token");
         localStorage.removeItem("melody_user");
         window.location.href = "index.html";
@@ -425,16 +420,77 @@ function uniqueSongsById(songs) {
 }
 
 function getTopArtists() {
-    const artists = new Map();
+    const playsByName = new Map();
     recentlyPlayed.forEach(song => {
         const name = String(song?.artist || "").trim();
         if (!name || name.toLowerCase() === "unknown artist") return;
         const key = name.toLocaleLowerCase();
-        const artist = artists.get(key) || { name, plays: 0 };
-        artist.plays++;
-        artists.set(key, artist);
+        playsByName.set(key, (playsByName.get(key) || 0) + 1);
     });
-    return [...artists.values()].sort((a, b) => b.plays - a.plays || a.name.localeCompare(b.name)).slice(0, 20);
+
+    return artistDirectory
+        .filter(artist => String(artist?.name || "").trim())
+        .map(artist => ({
+            ...artist,
+            name: String(artist.name).trim(),
+            plays: playsByName.get(String(artist.name).trim().toLocaleLowerCase()) || 0
+        }))
+        .sort((a, b) => b.plays - a.plays || a.name.localeCompare(b.name))
+        .slice(0, 20);
+}
+
+async function loadArtistDirectory() {
+    try {
+        const artists = await apiCall("/artists");
+        artistDirectory = Array.isArray(artists) ? artists : [];
+        artistDirectoryLoaded = true;
+        artistDirectoryLoadFailed = false;
+        renderTopArtists();
+        return artistDirectory;
+    } catch (error) {
+        artistDirectoryLoaded = true;
+        artistDirectoryLoadFailed = true;
+        renderTopArtists();
+        throw error;
+    }
+}
+
+function artistPhotoSource(artist) {
+    const value = String(artist?.photoUrl || artist?.photo_url || "").trim().replace(/\\/g, "/");
+    if (!value) return "";
+    if (/^https?:\/\//i.test(value)) return value;
+
+    const staticArtistPath = value.match(/(?:^|\/)(images\/artists\/.+)$/i);
+    if (staticArtistPath) return getFullUrl(staticArtistPath[1]);
+
+    const artistRelativePath = value.match(/^artists\/(.+)$/i);
+    if (artistRelativePath) return getFullUrl(`/images/artists/${artistRelativePath[1]}`);
+
+    if (!value.includes("/")) return getFullUrl(`/images/artists/${value}`);
+    return getFullUrl(value);
+}
+
+function applyArtistPhoto(avatar, artist) {
+    const photoSource = artistPhotoSource(artist);
+    if (!avatar || !photoSource) return;
+
+    avatar.dataset.artistPhotoSource = photoSource;
+    getDisplayThumbnailUrl(photoSource).then(displayUrl => {
+        if (avatar.dataset.artistPhotoSource !== photoSource) return;
+
+        const image = document.createElement("img");
+        image.alt = "";
+        image.loading = "lazy";
+        image.decoding = "async";
+        image.src = displayUrl;
+        image.addEventListener("error", () => {
+            image.remove();
+            avatar.textContent = String(artist?.name || "?").trim().charAt(0).toUpperCase();
+        }, { once: true });
+        avatar.replaceChildren(image);
+    }).catch(error => {
+        console.warn(`Could not load photo for ${artist?.name || "artist"}:`, error);
+    });
 }
 
 function renderTopArtists() {
@@ -445,7 +501,11 @@ function renderTopArtists() {
     if (!artists.length) {
         const empty = document.createElement("p");
         empty.className = "artist-empty";
-        empty.textContent = "Play music to build your top artists.";
+        empty.textContent = !artistDirectoryLoaded
+            ? "Loading artists…"
+            : artistDirectoryLoadFailed
+                ? "Could not load artists."
+                : "Add artists to your artist table to see them here.";
         grid.appendChild(empty);
         return;
     }
@@ -453,15 +513,14 @@ function renderTopArtists() {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "artist-card";
-        card.title = `${artist.name} · ${artist.plays} ${artist.plays === 1 ? "play" : "plays"}`;
+        card.title = artist.name;
         const avatar = document.createElement("span");
         avatar.className = `artist-avatar avatar-${String.fromCharCode(97 + (index % 5))}`;
         avatar.textContent = artist.name.trim().charAt(0).toUpperCase();
+        applyArtistPhoto(avatar, artist);
         const name = document.createElement("strong");
         name.textContent = artist.name;
-        const plays = document.createElement("small");
-        plays.textContent = `${artist.plays} ${artist.plays === 1 ? "play" : "plays"}`;
-        card.append(avatar, name, plays);
+        card.append(avatar, name);
         card.addEventListener("click", () => document.dispatchEvent(new CustomEvent("melody:open-artist", { detail: artist.name })));
         grid.appendChild(card);
     });
@@ -743,7 +802,7 @@ async function playSong(song, queue = null) {
 
             if (requestId !== playbackRequestId) return;
 
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401) {
                 localStorage.removeItem("melody_token");
                 localStorage.removeItem("melody_user");
                 window.location.href = "index.html";
@@ -2159,7 +2218,7 @@ document.addEventListener(
             if (!artists.length) {
                 const empty = document.createElement("p");
                 empty.className = "library-empty";
-                empty.textContent = "Play some songs to build your artist list.";
+                empty.textContent = "No artists are available in your artist table.";
                 libraryList.appendChild(empty);
                 return;
             }
@@ -2170,13 +2229,12 @@ document.addEventListener(
                 const avatar = document.createElement("span");
                 avatar.className = `top-artist-avatar avatar-${String.fromCharCode(97 + (index % 5))}`;
                 avatar.textContent = artist.name.charAt(0).toUpperCase();
+                applyArtistPhoto(avatar, artist);
                 const name = document.createElement("strong");
                 name.textContent = artist.name;
-                const count = document.createElement("small");
-                count.textContent = `${artist.plays} ${artist.plays === 1 ? "play" : "plays"}`;
                 const details = document.createElement("span");
                 details.className = "top-artist-details";
-                details.append(name, count);
+                details.append(name);
                 const arrow = document.createElement("span");
                 arrow.className = "top-artist-arrow";
                 arrow.textContent = "›";
@@ -2215,8 +2273,11 @@ document.addEventListener(
                     renderLibrarySongs(uniqueSongsById(recentlyPlayed).slice(0, 30), true);
                     showLibrary("Recently played");
                 } else if (kind === "artists") {
+                    await loadArtistDirectory();
+                    recentlyPlayed = await apiCall("/library/recent");
+                    renderTopArtists();
                     renderArtistDirectory();
-                    showLibrary("Your top 20 artists");
+                    showLibrary("Top 20 artists");
                 } else {
                     renderLibrarySongs(allSongs.slice(0, 30), true);
                     showLibrary("Made for you");
@@ -2338,8 +2399,11 @@ document.addEventListener(
 
             try {
                 const response = await fetch(`${API_URL}/library/history`, { headers: getAuthHeaders() });
-                if (response.status === 401 || response.status === 403) {
+                if (response.status === 401) {
                     throw new Error("Your sign-in has expired. Please sign in again to view history.");
+                }
+                if (response.status === 403) {
+                    throw new Error("You are signed in, but do not have permission to view this history.");
                 }
                 if (!response.ok) throw new Error("Could not load listening history.");
                 const entries = await response.json();
@@ -2452,6 +2516,7 @@ document.addEventListener(
         });
         restoreLastPlayedSong();
         loadSongs();
+        loadArtistDirectory().catch(error => console.error("Could not load artists:", error));
         refreshLikedSongs().catch(error => console.error("Could not load liked songs:", error));
         refreshPlaylists().catch(error => console.error("Could not load playlists:", error));
         apiCall("/library/recent")

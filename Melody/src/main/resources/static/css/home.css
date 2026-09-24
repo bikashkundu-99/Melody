@@ -1004,15 +1004,14 @@ body { background: #0b1427; color:#f4f7fb; }
 .artist-card { appearance:none; flex:0 0 106px; min-width:0; padding:5px 4px 8px; border:0; border-radius:9px; background:transparent; cursor:pointer; transition:background .18s,transform .18s; }
 .artist-card:hover { background:#172943; transform:translateY(-2px); }
 .artist-card .artist-avatar { width:78px; border:1px solid #ffffff22; }
+.artist-avatar img,.top-artist-avatar img { display:block; width:100%; height:100%; border-radius:inherit; object-fit:cover; }
 .artist-card strong { max-width:100%; overflow:hidden; color:#eaf1fa; font-size:11px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
-.artist-card small { color:#8fa0b7; font-size:10px; }
 .artist-empty { padding:12px 2px; color:#91a0b7; font-size:12px; }
 .top-artist-row { display:grid; width:100%; grid-template-columns:30px 42px minmax(0,1fr) 20px; align-items:center; gap:12px; padding:8px 10px; border:0; border-radius:8px; background:transparent; color:#eef4fc; text-align:left; font:inherit; cursor:pointer; }
 .top-artist-row:hover { background:#20314b; }
 .top-artist-avatar { width:42px; aspect-ratio:1; display:grid; place-items:center; border-radius:50%; color:#fff; font-weight:700; }
 .top-artist-details { display:flex; min-width:0; flex-direction:column; gap:4px; }
 .top-artist-details strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
-.top-artist-details small { color:#91a0b7; font-size:10px; }
 .top-artist-arrow { color:var(--teal); font-size:24px; text-align:center; }
 
 /* Crisp vector controls and balanced player spacing. */
