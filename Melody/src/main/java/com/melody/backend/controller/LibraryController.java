@@ -4,6 +4,7 @@ import com.melody.backend.entity.LikedSong;
 import com.melody.backend.entity.RecentlyPlayed;
 import com.melody.backend.entity.Song;
 import com.melody.backend.entity.User;
+import com.melody.backend.dto.ListeningHistoryEntry;
 import com.melody.backend.repository.LikedSongRepository;
 import com.melody.backend.repository.RecentlyPlayedRepository;
 import com.melody.backend.repository.SongRepository;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/library")
@@ -57,6 +59,13 @@ public class LibraryController {
     public List<Song> getRecentlyPlayed(@AuthenticationPrincipal User user) {
         return recentlyPlayed.findByUser_IdOrderByPlayedAtDesc(user.getId())
                 .stream().map(RecentlyPlayed::getSong).toList();
+    }
+
+    @GetMapping("/history")
+    public List<ListeningHistoryEntry> getListeningHistory(@AuthenticationPrincipal User user) {
+        LocalDateTime threeMonthsAgo = LocalDateTime.now().minusMonths(3);
+        return recentlyPlayed.findByUser_IdAndPlayedAtGreaterThanEqualOrderByPlayedAtDesc(user.getId(), threeMonthsAgo)
+                .stream().map(ListeningHistoryEntry::from).toList();
     }
 
     @PostMapping("/recent/{songId}")

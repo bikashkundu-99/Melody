@@ -79,7 +79,7 @@
                     <strong>History</strong>
 
                     <span>
-                        View your recently played songs
+                        View the songs you played in the last 3 months
                     </span>
 
                 </div>
@@ -145,6 +145,20 @@
             </button>
 
         </div>
+
+
+        <section class="history-panel" id="historyPanel" hidden>
+            <div class="history-heading">
+                <div>
+                    <p>YOUR LISTENING</p>
+                    <h2>History · Last 3 months</h2>
+                </div>
+                <button type="button" class="history-close" onclick="closeHistory()" aria-label="Close history">×</button>
+            </div>
+            <div class="history-list" id="historyList">
+                <p class="history-empty">Loading your listening history…</p>
+            </div>
+        </section>
 
 
         <!-- Account Details -->

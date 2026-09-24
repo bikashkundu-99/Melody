@@ -2,6 +2,26 @@ USE MelodyDB;
 GO
 
 -- =====================================================
+-- ARTISTS
+-- Keep profile details separate from songs.artist so
+-- existing song rows remain compatible.
+-- =====================================================
+
+IF OBJECT_ID('dbo.artists', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.artists
+    (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        name NVARCHAR(150) NOT NULL,
+        bio NVARCHAR(MAX) NULL,
+        photo_url NVARCHAR(1000) NULL,
+        created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT UQ_artists_name UNIQUE(name)
+    );
+END;
+GO
+
+-- =====================================================
 -- USERS
 -- =====================================================
 

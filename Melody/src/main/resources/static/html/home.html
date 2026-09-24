@@ -9,7 +9,7 @@
 <body>
 <aside class="sidebar">
     <div class="brand">
-        <div class="brand-icon">♫</div>
+        <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 20v-5M13 24V9M18 20v-8M23 23V6"/></svg></div>
         <div class="brand-name">Melody</div>
     </div>
 
@@ -33,20 +33,19 @@
 
 <main class="main">
     <header class="header">
-        <nav class="top-nav" aria-label="Main sections"><a class="active" href="#homeContent" id="myLibraryNav">My Library</a></nav>
         <div class="search">
             <span class="search-icon">⌕</span>
             <input type="text" id="searchInput" placeholder="Search songs, artists, albums...">
+            <section class="search-results-panel" id="searchResultsPanel" aria-live="polite" hidden>
+                <h2>Search results</h2>
+                <div class="search-results-grid" id="searchResultsGrid"></div>
+            </section>
         </div>
 
         <div class="header-actions">
-            <div class="profile" id="profileButton" onclick="openAccountPage()">B</div>
+            <button type="button" class="profile" id="profileButton" aria-label="Open account">B</button>
         </div>
     </header>
-    <section class="search-results-panel" id="searchResultsPanel" aria-live="polite" hidden>
-        <h2>Search results</h2>
-        <div class="search-results-grid" id="searchResultsGrid"></div>
-    </section>
     <div class="content" id="homeContent">
 
         <section class="section">
@@ -69,7 +68,6 @@
             <div class="music-grid">
                 <div class="music-card">
                     <div class="album gradient-1">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Midnight Vibes</h3>
@@ -77,7 +75,6 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-2">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Late Night Drive</h3>
@@ -85,7 +82,6 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-3">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Focus Flow</h3>
@@ -93,7 +89,6 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-4">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Feel Good</h3>
@@ -101,12 +96,20 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-5">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Deep Focus</h3>
                     <p>Ambient</p>
                 </div>
+            </div>
+        </section>
+        <section class="section artist-section">
+            <div class="section-header">
+                <h2>Your top artists</h2>
+                <button class="see-all" type="button" data-view="artists">See all</button>
+            </div>
+            <div class="artist-grid" id="topArtistsGrid">
+                <p class="artist-empty">Your most-played artists will appear here.</p>
             </div>
         </section>
     </div>
@@ -125,6 +128,7 @@
 <!-- ================= COMPACT PLAYER ================= -->
 <div class="player" id="playerBar" role="button" tabindex="0" aria-label="Open music player">
     <div class="now-playing">
+        <span class="player-sound-mark" aria-hidden="true"><i></i><i></i><i></i></span>
         <div class="player-cover">♫</div>
         <div>
             <h4>No song selected</h4>
@@ -134,10 +138,10 @@
 
     <div class="controls">
         <div class="compact-controls-row">
-            <div class="control player-control" aria-label="Previous song">◀</div>
-            <div class="play-main player-control" aria-label="Play">▶</div>
-            <div class="control player-control" aria-label="Next song">▶</div>
-            <button class="like-player player-control" id="playerLikeButton" type="button" aria-label="Like song">♡</button>
+            <button type="button" class="control player-control" aria-label="Previous song" title="Previous song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg></button>
+            <button type="button" class="play-main player-control" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button>
+            <button type="button" class="control player-control" aria-label="Next song" title="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
+            <button class="like-player player-control" id="playerLikeButton" type="button" aria-label="Like song" title="Like song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg></button>
             <button class="player-save" id="compactSaveButton" type="button" aria-label="Save to playlist" title="Save to playlist">Save</button>
         </div>
         <div class="compact-progress" aria-label="Song progress">
@@ -147,10 +151,11 @@
         </div>
     </div>
     <div class="volume" aria-label="Volume controls">
-        <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false">🔊</button>
+        <button class="shuffle-toggle" type="button" aria-label="Shuffle off" aria-pressed="false" title="Shuffle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M4 4l5 5m3 3 9 9"/></svg></button>
+        <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4zM17 9a5 5 0 0 1 0 6"/></svg></button>
         <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
     </div>
-    <button class="maximize-player" id="maximizePlayer" type="button" aria-label="Open full screen player" title="Expand player">⛶</button>
+    <button class="maximize-player" id="maximizePlayer" type="button" aria-label="Open full screen player" title="Expand player"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg></button>
 </div>
 
 <!-- ================= EXPANDED PLAYER ================= -->
@@ -170,18 +175,19 @@
         </div>
 
         <div class="expanded-controls">
-            <button type="button" class="expanded-control player-control" aria-label="Previous song">◀</button>
-            <button type="button" class="expanded-play player-control" aria-label="Play">▶</button>
-            <button type="button" class="expanded-control player-control" aria-label="Next song">▶</button>
-            <button type="button" class="expanded-like player-control" id="expandedLikeButton" aria-label="Like song">♡</button>
+            <button type="button" class="expanded-control player-control" aria-label="Previous song" title="Previous song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg></button>
+            <button type="button" class="expanded-play player-control" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button>
+            <button type="button" class="expanded-control player-control" aria-label="Next song" title="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
+            <button type="button" class="expanded-like player-control" id="expandedLikeButton" aria-label="Like song" title="Like song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg></button>
             <button type="button" class="player-save" id="expandedSaveButton" aria-label="Save to playlist" title="Save to playlist">Save</button>
         </div>
         <div class="expanded-volume" aria-label="Volume controls">
-            <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false">🔊</button>
+            <button class="shuffle-toggle" type="button" aria-label="Shuffle off" aria-pressed="false" title="Shuffle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M4 4l5 5m3 3 9 9"/></svg></button>
+            <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4zM17 9a5 5 0 0 1 0 6"/></svg></button>
             <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
         </div>
     </div>
-    <button class="player-collapse" id="collapsePlayer" type="button" aria-label="Minimize player" title="Minimize player">⤡</button>
+    <button class="player-collapse" id="collapsePlayer" type="button" aria-label="Minimize player" title="Minimize player"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5H3M16 3v5h5M3 16h5v5M21 16h-5v5"/></svg></button>
 </div>
 
 <!-- ================= CREATE PLAYLIST MODAL ================= -->
@@ -195,20 +201,6 @@
 
         <div class="form-field">
             <input id="playlistDescription" type="text" placeholder="Description" maxlength="200">
-        </div>
-
-        <div class="privacy-label">Privacy</div>
-        <button class="privacy-select" id="privacySelect" type="button">
-            <span>🌐</span>
-            <strong id="privacyValue">Public</strong>
-            <span class="privacy-arrow">⌄</span>
-        </button>
-
-        <div class="collaborate-row">
-            <span>Collaborate</span>
-            <button class="toggle" id="collaborateToggle" type="button" aria-pressed="false">
-                <span></span>
-            </button>
         </div>
 
         <div class="modal-actions">
@@ -234,11 +226,18 @@
     <div class="liked-modal" role="dialog" aria-modal="true" aria-labelledby="likedSongsTitle">
         <div class="liked-header">
             <div>
-                <div class="liked-icon">♡</div>
+                <div class="liked-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg></div>
                 <h2 id="likedSongsTitle">Liked Songs</h2>
                 <p>Your favorite songs</p>
             </div>
-            <button class="close-panel" id="closeLikedSongs" type="button" aria-label="Close">×</button>
+            <div class="liked-header-actions">
+                <div class="liked-playback-controls" aria-label="Liked songs playback controls">
+                    <button type="button" id="likedPrevious" aria-label="Previous liked song" title="Previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg></button>
+                    <button type="button" id="likedPlayPause" class="liked-play-toggle" aria-label="Play liked songs" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button>
+                    <button type="button" id="likedNext" aria-label="Next liked song" title="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
+                </div>
+                <button class="close-panel" id="closeLikedSongs" type="button" aria-label="Close">×</button>
+            </div>
         </div>
 
         <div class="liked-list" id="likedSongsList">

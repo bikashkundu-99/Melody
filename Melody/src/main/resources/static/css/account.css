@@ -332,3 +332,26 @@ body { background:radial-gradient(circle at 15% 10%,rgba(13,147,153,.18),transpa
 .option { border-color:#263853; }
 .option-icon { color:#27d0d2; }
 .sign-out { color:#ff7188; }
+.history-panel { margin-top:20px; padding:22px; border:1px solid #263853; border-radius:14px; background:linear-gradient(145deg,#14243a,#101a2c); box-shadow:0 20px 50px #0004; }
+.history-panel[hidden] { display:none; }
+.history-heading { display:flex; justify-content:space-between; align-items:center; gap:18px; padding-bottom:16px; border-bottom:1px solid #263853; }
+.history-heading p { margin-bottom:6px; color:#13c4c8; font-size:10px; letter-spacing:1.6px; }
+.history-heading h2 { font-size:20px; }
+.history-close { width:34px; height:34px; border:0; border-radius:50%; background:#22334c; color:#dce7f4; font-size:22px; cursor:pointer; }
+.history-list { display:flex; flex-direction:column; gap:3px; max-height:460px; overflow:auto; padding-top:10px; }
+.history-entry { display:grid; grid-template-columns:46px minmax(0,1fr) auto; align-items:center; gap:12px; padding:8px; border-radius:8px; }
+.history-entry:hover { background:#1b2d47; }
+.history-cover { width:46px; height:46px; display:grid; place-items:center; border-radius:6px; color:#fff; font-weight:700; font-size:18px; text-shadow:0 1px 8px #0006; }
+.history-cover-1 { background:linear-gradient(135deg,#7554a4,#203d68); }
+.history-cover-2 { background:linear-gradient(135deg,#d05b7b,#292c62); }
+.history-cover-3 { background:linear-gradient(135deg,#178e91,#274370); }
+.history-cover-4 { background:linear-gradient(135deg,#df9c40,#683d7e); }
+.history-cover-5 { background:linear-gradient(135deg,#4b69ab,#232f4b); }
+.history-song { display:flex; min-width:0; flex-direction:column; gap:5px; }
+.history-song strong,.history-song span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.history-song strong { font-size:13px; }
+.history-song span { color:#91a0b7; font-size:11px; }
+.history-entry time { color:#91a0b7; font-size:11px; white-space:nowrap; }
+.history-empty { padding:22px 8px; color:#91a0b7; font-size:13px; }
+.history-error { color:#ff9cae; }
+@media (max-width:600px) { .history-panel { padding:16px 12px; } .history-entry { grid-template-columns:40px minmax(0,1fr); } .history-cover { width:40px; height:40px; } .history-entry time { grid-column:2; font-size:10px; } }
