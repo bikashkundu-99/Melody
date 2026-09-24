@@ -566,25 +566,6 @@ function bindSongsToMusicCards() {
 
             }
         );
-
-
-        const playButton =
-            card.querySelector(".play-button");
-
-
-        if (playButton) {
-
-            playButton.addEventListener(
-                "click",
-                function (event) {
-
-                    event.stopPropagation();
-
-                    playSong(song, allSongs);
-
-                }
-            );
-        }
     });
 }
 
@@ -924,9 +905,6 @@ function renderLikedSongs() {
     likedSongs.forEach((song, index) => {
         const row = document.createElement("div");
         row.className = "liked-row";
-        const number = document.createElement("span");
-        number.className = "liked-number";
-        number.textContent = String(index + 1);
         const cover = document.createElement("div");
         cover.className = `liked-cover album-${(index % 4) + 1}`;
         cover.textContent = "♫";
@@ -935,8 +913,7 @@ function renderLikedSongs() {
         info.className = "liked-song";
         const title = document.createElement("h3");
         title.textContent = song.title || "Unknown title";
-        const artist = document.createElement("p");
-        artist.textContent = song.artist || "Unknown artist";
+        const artist = createArtistLink(song.artist, "liked-artist-link");
         info.append(title, artist);
         const unlike = document.createElement("button");
         unlike.type = "button";
@@ -952,7 +929,7 @@ function renderLikedSongs() {
                 showPlaybackNotice(error.message || "Could not remove liked song.");
             }
         });
-        row.append(number, cover, info, unlike);
+        row.append(cover, info, unlike);
         row.addEventListener("click", () => playSong(song, likedSongs));
         list.appendChild(row);
     });
@@ -1056,13 +1033,6 @@ function updatePlayButtons(isPlaying) {
         expandedPlay.title = isPlaying ? "Pause" : "Play";
     }
 
-    const likedPlay = document.getElementById("likedPlayPause");
-    if (likedPlay) {
-        const likedSongIsPlaying = isPlaying && likedSongs.some(song => String(song.id) === String(currentSong?.id));
-        likedPlay.innerHTML = likedSongIsPlaying ? PAUSE_ICON : PLAY_ICON;
-        likedPlay.setAttribute("aria-label", likedSongIsPlaying ? "Pause liked songs" : "Play liked songs");
-        likedPlay.title = likedSongIsPlaying ? "Pause" : "Play";
-    }
 }
 
 
@@ -1855,27 +1825,6 @@ document.addEventListener(
             }
         });
 
-        document.getElementById("likedPlayPause")?.addEventListener("click", () => {
-            if (!likedSongs.length) {
-                showPlaybackNotice("Like a song to start your collection.");
-                return;
-            }
-            const currentIsLiked = likedSongs.some(song => String(song.id) === String(currentSong?.id));
-            if (currentIsLiked) {
-                playbackQueue = likedSongs;
-                togglePlayPause();
-            } else {
-                playSong(likedSongs[0], likedSongs);
-            }
-        });
-        document.getElementById("likedPrevious")?.addEventListener("click", () => {
-            if (likedSongs.length) playPreviousSong(likedSongs);
-        });
-        document.getElementById("likedNext")?.addEventListener("click", () => {
-            if (likedSongs.length) playNextSong(likedSongs);
-        });
-
-
         /* =================================================
            LIKED SONG HEARTS
         ================================================= */
@@ -2044,7 +1993,7 @@ document.addEventListener(
             document.body.classList.add("library-open");
         }
 
-        function renderLibrarySongs(songs) {
+        function renderLibrarySongs(songs, artistLinks = false) {
             libraryList.replaceChildren();
             if (!songs.length) {
                 const empty = document.createElement("p");
@@ -2056,9 +2005,6 @@ document.addEventListener(
             songs.forEach((song, index) => {
                 const row = document.createElement("div");
                 row.className = "library-row";
-                const number = document.createElement("span");
-                number.className = "liked-number";
-                number.textContent = String(index + 1);
                 const cover = document.createElement("div");
                 cover.className = `album-small album-${(index % 4) + 1}`;
                 cover.textContent = "♫";
@@ -2067,13 +2013,12 @@ document.addEventListener(
                 info.className = "song-info";
                 const title = document.createElement("h3");
                 title.textContent = song.title || "Unknown title";
-                const artist = document.createElement("p");
-                artist.textContent = song.artist || "Unknown artist";
+                const artist = artistLinks
+                    ? createArtistLink(song.artist, "library-artist-link")
+                    : document.createElement("p");
+                if (!artistLinks) artist.textContent = song.artist || "Unknown artist";
                 info.append(title, artist);
-                const play = document.createElement("span");
-                play.className = "library-play";
-                play.textContent = "▶";
-                row.append(number, cover, info, play);
+                row.append(cover, info);
                 row.addEventListener("click", () => playSong(song, songs));
                 libraryList.appendChild(row);
             });
@@ -2158,9 +2103,6 @@ document.addEventListener(
                 const row = document.createElement("button");
                 row.type = "button";
                 row.className = "top-artist-row";
-                const rank = document.createElement("span");
-                rank.className = "top-artist-rank";
-                rank.textContent = String(index + 1).padStart(2, "0");
                 const avatar = document.createElement("span");
                 avatar.className = `top-artist-avatar avatar-${String.fromCharCode(97 + (index % 5))}`;
                 avatar.textContent = artist.name.charAt(0).toUpperCase();
@@ -2174,7 +2116,7 @@ document.addEventListener(
                 const arrow = document.createElement("span");
                 arrow.className = "top-artist-arrow";
                 arrow.textContent = "›";
-                row.append(rank, avatar, details, arrow);
+                row.append(avatar, details, arrow);
                 row.addEventListener("click", () => openArtistSongs(artist.name, true));
                 libraryList.appendChild(row);
             });
@@ -2206,13 +2148,13 @@ document.addEventListener(
                     recentlyPlayed = await apiCall("/library/recent");
                     renderRecentlyPlayed();
                     renderTopArtists();
-                    renderLibrarySongs(uniqueSongsById(recentlyPlayed).slice(0, 30));
+                    renderLibrarySongs(uniqueSongsById(recentlyPlayed).slice(0, 30), true);
                     showLibrary("Recently played");
                 } else if (kind === "artists") {
                     renderArtistDirectory();
                     showLibrary("Your top 20 artists");
                 } else {
-                    renderLibrarySongs(allSongs.slice(0, 30));
+                    renderLibrarySongs(allSongs.slice(0, 30), true);
                     showLibrary("Made for you");
                 }
             } catch (error) {
@@ -2369,8 +2311,7 @@ document.addEventListener(
                         song.className = "library-history-song";
                         const title = document.createElement("strong");
                         title.textContent = entry.title || "Unknown title";
-                        const artist = document.createElement("small");
-                        artist.textContent = entry.artist || "Unknown artist";
+                        const artist = createArtistLink(entry.artist, "library-history-artist");
                         song.append(title, artist);
                         const playedAt = document.createElement("time");
                         const date = new Date(entry.playedAt);
@@ -2396,6 +2337,13 @@ document.addEventListener(
             button.addEventListener("click", () => openLibrary(button.dataset.view));
         });
         document.addEventListener("melody:open-artist", event => openArtistSongs(event.detail));
+        const requestedArtist = new URLSearchParams(window.location.search).get("artist");
+        if (requestedArtist) {
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete("artist");
+            window.history.replaceState(null, "", cleanUrl);
+            openArtistSongs(requestedArtist);
+        }
         document.getElementById("myLibraryNav")?.addEventListener("click", event => {
             event.preventDefault();
             openMyLibrary();

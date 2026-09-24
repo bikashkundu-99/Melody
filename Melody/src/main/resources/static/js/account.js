@@ -226,8 +226,13 @@ function openHistory() {
                 info.className = "history-song";
                 const title = document.createElement("strong");
                 title.textContent = entry.title || "Unknown title";
-                const artist = document.createElement("span");
-                artist.textContent = entry.artist || "Unknown artist";
+                const artist = document.createElement("a");
+                const artistName = entry.artist || "Unknown artist";
+                const homeUrl = new URL("home.html", window.location.href);
+                homeUrl.searchParams.set("artist", artistName);
+                artist.href = homeUrl.href;
+                artist.className = "history-artist-link";
+                artist.textContent = artistName;
                 info.append(title, artist);
                 const playedAt = document.createElement("time");
                 const date = new Date(entry.playedAt);

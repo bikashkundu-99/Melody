@@ -364,3 +364,5 @@ body { background:radial-gradient(circle at 15% 10%,rgba(13,147,153,.18),transpa
 .history-day-heading small { margin-left:auto; color:#91a4bc; font-size:10px; }
 .history-day-entries { padding:0 7px 7px; }
 .history-day-entries .history-entry { border-top:1px solid #ffffff09; }
+.history-song a.history-artist-link { width:max-content; max-width:100%; overflow:hidden; color:#91a0b7; font-size:11px; text-decoration:none; text-overflow:ellipsis; white-space:nowrap; }
+.history-song a.history-artist-link:hover { color:#13c4c8; text-decoration:underline; }
