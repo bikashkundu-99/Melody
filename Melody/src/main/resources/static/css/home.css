@@ -1397,32 +1397,30 @@ body { background: #0b1427; color:#f4f7fb; }
     aspect-ratio: 1;
     border-radius: 9px;
 }
-.artist-grid .artist-card strong,
-.library-list.artist-directory-grid .artist-card strong {
+.artist-grid .artist-card strong {
     width: 100%;
     text-align: center;
 }
-.library-list.artist-directory-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-    align-items: start;
-    gap: 16px;
-}
-.library-list.artist-directory-grid .artist-card {
+.library-list.artist-directory-list {
     display: flex;
-    width: 100%;
-    min-width: 0;
-    flex: none;
     flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    padding: 8px;
+    gap: 4px;
 }
-.library-list.artist-directory-grid .artist-avatar {
-    width: min(100%, 150px);
-    height: auto;
-    aspect-ratio: 1;
-    border-radius: 9px;
+.library-list.artist-directory-list .top-artist-row {
+    grid-template-columns: 54px minmax(0, 1fr) 20px;
+    gap: 14px;
+    padding: 9px 12px;
+    border-bottom: 1px solid #ffffff0b;
+}
+.library-list.artist-directory-list .top-artist-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 7px;
+}
+.library-list.artist-directory-list .top-artist-details strong {
+    color: #eaf1fa;
+    font-size: 14px;
+    font-weight: 600;
 }
 .library-history-cover { overflow: hidden; }
 @media (max-width: 1050px) {
@@ -1433,5 +1431,6 @@ body { background: #0b1427; color:#f4f7fb; }
 }
 @media (max-width: 480px) {
     .artist-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-    .library-list.artist-directory-grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 10px; }
+    .library-list.artist-directory-list .top-artist-row { grid-template-columns: 46px minmax(0, 1fr) 18px; gap: 10px; padding: 8px; }
+    .library-list.artist-directory-list .top-artist-avatar { width: 46px; height: 46px; }
 }

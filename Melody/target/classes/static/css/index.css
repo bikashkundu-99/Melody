@@ -452,3 +452,16 @@ MOBILE
 }
 
 }
+/* Melody navy and teal theme */
+body { background:radial-gradient(circle at 15% 15%,rgba(13,147,153,.18),transparent 32%),#0b1427; }
+.logo-icon { background:linear-gradient(135deg,#10c9cf,#3864dc); }
+.card { background:rgba(17,29,51,.94); border-color:#263853; box-shadow:0 25px 80px rgba(0,0,0,.5); }
+.tabs { background:#0c172a; }
+.tab.active { background:#1b2d47; color:#fff; }
+.input-group input { background:#0d192d; border-color:#33455f; }
+.input-group input:focus { border-color:#13c4c8; }
+.forgot span,.bottom-text span { color:#21cbd0; }
+.primary-btn { background:#13c4c8; color:#08202b; }
+.primary-btn:hover { background:#2ed8d9; }
+.google-btn { background:#15233a; border-color:#32445e; }
+.google-btn:hover { background:#20324d; }

@@ -9,7 +9,7 @@
 <body>
 <aside class="sidebar">
     <div class="brand">
-        <div class="brand-icon">♫</div>
+        <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 20v-5M13 24V9M18 20v-8M23 23V6"/></svg></div>
         <div class="brand-name">Melody</div>
     </div>
 
@@ -18,16 +18,17 @@
         <div class="nav-icon">⌂</div>
         <span>Home</span>
     </div>
-    <div class="nav-item" id="createPlaylistNav">
-        <div class="nav-icon">＋</div>
-        <span>Create Playlist</span>
-    </div>
-
     <div class="menu-title">Your Music</div>
     <div class="nav-item" id="likedSongsNav">
         <div class="nav-icon">♡</div>
         <span>Liked Songs</span>
     </div>
+    <button class="nav-item create-playlist-nav" id="createPlaylistNav" type="button">
+        <span class="nav-icon">＋</span>
+        <span>Create playlist</span>
+    </button>
+    <div class="menu-title">Your Playlists</div>
+    <div class="sidebar-playlists" id="userPlaylists"></div>
 </aside>
 
 <main class="main">
@@ -35,62 +36,38 @@
         <div class="search">
             <span class="search-icon">⌕</span>
             <input type="text" id="searchInput" placeholder="Search songs, artists, albums...">
+            <section class="search-results-panel" id="searchResultsPanel" aria-live="polite" hidden>
+                <h2>Search results</h2>
+                <div class="search-results-grid" id="searchResultsGrid"></div>
+            </section>
         </div>
 
         <div class="header-actions">
-            <div class="profile" id="profileButton" onclick="openAccountPage()">B</div>
+            <button type="button" class="profile" id="profileButton" aria-label="Open account">B</button>
         </div>
     </header>
-
     <div class="content" id="homeContent">
+
         <section class="section">
             <div class="section-header">
                 <h2>Recently played</h2>
-                <span class="see-all">See all</span>
+                <button class="see-all" type="button" data-view="recent">See all</button>
             </div>
 
-            <div class="recent-grid">
-                <div class="recent-card">
-                    <div class="album-small album-1">♫</div>
-                    <div class="song-info">
-                        <h3>Blinding Lights</h3>
-                        <p>The Weeknd</p>
-                    </div>
-                </div>
-                <div class="recent-card">
-                    <div class="album-small album-2">♫</div>
-                    <div class="song-info">
-                        <h3>Starboy</h3>
-                        <p>The Weeknd</p>
-                    </div>
-                </div>
-                <div class="recent-card">
-                    <div class="album-small album-3">♫</div>
-                    <div class="song-info">
-                        <h3>Night Changes</h3>
-                        <p>One Direction</p>
-                    </div>
-                </div>
-                <div class="recent-card">
-                    <div class="album-small album-4">♫</div>
-                    <div class="song-info">
-                        <h3>Perfect</h3>
-                        <p>Ed Sheeran</p>
-                    </div>
-                </div>
+            <div class="recent-grid" id="recentGrid">
+                <p class="recent-empty">Play a song and it will appear here.</p>
             </div>
         </section>
 
         <section class="section">
             <div class="section-header">
                 <h2>Made for you</h2>
-                <span class="see-all">See all</span>
+                <button class="see-all" type="button" data-view="made-for-you">See all</button>
             </div>
 
             <div class="music-grid">
                 <div class="music-card">
                     <div class="album gradient-1">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Midnight Vibes</h3>
@@ -98,7 +75,6 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-2">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Late Night Drive</h3>
@@ -106,7 +82,6 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-3">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Focus Flow</h3>
@@ -114,7 +89,6 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-4">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Feel Good</h3>
@@ -122,7 +96,6 @@
                 </div>
                 <div class="music-card">
                     <div class="album gradient-5">
-                        ♫
                         <div class="play-button">▶</div>
                     </div>
                     <h3>Deep Focus</h3>
@@ -130,57 +103,91 @@
                 </div>
             </div>
         </section>
+        <section class="section artist-section">
+            <div class="section-header">
+                <h2>Your top artists</h2>
+                <button class="see-all" type="button" data-view="artists">See all</button>
+            </div>
+            <div class="artist-grid" id="topArtistsGrid">
+                <p class="artist-empty">Your most-played artists will appear here.</p>
+            </div>
+        </section>
     </div>
 </main>
+
+<section class="library-view" id="libraryView" aria-hidden="true" aria-labelledby="libraryTitle">
+    <div class="library-backdrop" data-close-library></div>
+    <div class="library-content" role="dialog" aria-modal="true">
+        <button class="library-minimize" id="libraryMinimize" type="button" aria-label="Close list">×</button>
+        <p class="library-eyebrow">YOUR MUSIC</p>
+        <h1 id="libraryTitle">Recently played</h1>
+        <div class="library-list" id="libraryList"></div>
+    </div>
+</section>
 
 <!-- ================= COMPACT PLAYER ================= -->
 <div class="player" id="playerBar" role="button" tabindex="0" aria-label="Open music player">
     <div class="now-playing">
+        <span class="player-sound-mark" aria-hidden="true"><i></i><i></i><i></i></span>
         <div class="player-cover">♫</div>
         <div>
-            <h4>Blinding Lights</h4>
-            <p>The Weeknd</p>
+            <h4>No song selected</h4>
+            <button class="player-artist-link" id="compactArtist" type="button">Choose a song to start listening</button>
         </div>
     </div>
 
     <div class="controls">
-        <div class="control player-control">◀</div>
-        <div class="play-main player-control">▶</div>
-        <div class="control player-control">▶</div>
-        <button class="like-player player-control" id="playerLikeButton" type="button" aria-label="Like song">♡</button>
+        <div class="compact-controls-row">
+            <button type="button" class="control player-control" aria-label="Previous song" title="Previous song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg></button>
+            <button type="button" class="play-main player-control" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button>
+            <button type="button" class="control player-control" aria-label="Next song" title="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
+            <button class="like-player player-control" id="playerLikeButton" type="button" aria-label="Like song" title="Like song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg></button>
+            <button class="player-save" id="compactSaveButton" type="button" aria-label="Save to playlist" title="Save to playlist">Save</button>
+        </div>
+        <div class="compact-progress" aria-label="Song progress">
+            <span class="current-time">0:00</span>
+            <input class="seek-slider" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek through song">
+            <span class="duration-time">0:00</span>
+        </div>
     </div>
-
-    <div class="volume player-control">
-        <span>🔊</span>
-        <div class="volume-line"></div>
+    <div class="volume" aria-label="Volume controls">
+        <button class="repeat-toggle" type="button" aria-label="Repeat off" aria-pressed="false" title="Repeat off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg></button>
+        <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4zM17 9a5 5 0 0 1 0 6"/></svg></button>
+        <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
     </div>
+    <button class="maximize-player" id="maximizePlayer" type="button" aria-label="Open full screen player" title="Expand player"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg></button>
 </div>
 
 <!-- ================= EXPANDED PLAYER ================= -->
 <div class="player-expanded" id="expandedPlayer" aria-hidden="true">
-    <button class="player-collapse" id="collapsePlayer" type="button" aria-label="Minimize player">⌄</button>
-
     <div class="expanded-content">
         <div class="expanded-cover">♫</div>
 
         <div class="expanded-song-info">
-            <h2>Blinding Lights</h2>
-            <p>The Weeknd</p>
+            <h2>No song selected</h2>
+            <button class="player-artist-link" id="expandedArtist" type="button">Choose a song to start listening</button>
         </div>
 
         <div class="expanded-progress">
-            <span>0:00</span>
-            <div class="progress-track"><div class="progress-fill"></div></div>
-            <span>4:21</span>
+            <span class="current-time">0:00</span>
+            <input class="seek-slider expanded-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek through song">
+            <span class="duration-time">0:00</span>
         </div>
 
         <div class="expanded-controls">
-            <button type="button" class="expanded-control player-control" aria-label="Previous song">◀</button>
-            <button type="button" class="expanded-play player-control" aria-label="Play">▶</button>
-            <button type="button" class="expanded-control player-control" aria-label="Next song">▶</button>
-            <button type="button" class="expanded-like player-control" id="expandedLikeButton" aria-label="Like song">♡</button>
+            <button type="button" class="expanded-control player-control" aria-label="Previous song" title="Previous song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg></button>
+            <button type="button" class="expanded-play player-control" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button>
+            <button type="button" class="expanded-control player-control" aria-label="Next song" title="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
+            <button type="button" class="expanded-like player-control" id="expandedLikeButton" aria-label="Like song" title="Like song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg></button>
+            <button type="button" class="player-save" id="expandedSaveButton" aria-label="Save to playlist" title="Save to playlist">Save</button>
+        </div>
+        <div class="expanded-volume" aria-label="Volume controls">
+            <button class="repeat-toggle" type="button" aria-label="Repeat off" aria-pressed="false" title="Repeat off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg></button>
+            <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4zM17 9a5 5 0 0 1 0 6"/></svg></button>
+            <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
         </div>
     </div>
+    <button class="player-collapse" id="collapsePlayer" type="button" aria-label="Minimize player" title="Minimize player"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5H3M16 3v5h5M3 16h5v5M21 16h-5v5"/></svg></button>
 </div>
 
 <!-- ================= CREATE PLAYLIST MODAL ================= -->
@@ -196,24 +203,21 @@
             <input id="playlistDescription" type="text" placeholder="Description" maxlength="200">
         </div>
 
-        <div class="privacy-label">Privacy</div>
-        <button class="privacy-select" id="privacySelect" type="button">
-            <span>🌐</span>
-            <strong id="privacyValue">Public</strong>
-            <span class="privacy-arrow">⌄</span>
-        </button>
-
-        <div class="collaborate-row">
-            <span>Collaborate</span>
-            <button class="toggle" id="collaborateToggle" type="button" aria-pressed="false">
-                <span></span>
-            </button>
-        </div>
-
         <div class="modal-actions">
             <button class="cancel-button" id="cancelPlaylist" type="button">Cancel</button>
             <button class="create-button" id="createPlaylist" type="button">Create</button>
         </div>
+    </div>
+</div>
+
+<!-- ================= SAVE TO PLAYLIST ================= -->
+<div class="modal-overlay" id="saveToPlaylistModal" aria-hidden="true">
+    <div class="save-playlist-modal" role="dialog" aria-modal="true" aria-labelledby="savePlaylistTitle">
+        <button class="close-panel save-playlist-close" id="closeSavePlaylist" type="button" aria-label="Close">×</button>
+        <h2 id="savePlaylistTitle">Save to playlist</h2>
+        <p id="savePlaylistSongTitle">Choose a playlist for this song.</p>
+        <div id="savePlaylistOptions" class="save-playlist-options"></div>
+        <button class="create-button" id="newPlaylistFromSave" type="button">＋ New playlist</button>
     </div>
 </div>
 
@@ -222,53 +226,22 @@
     <div class="liked-modal" role="dialog" aria-modal="true" aria-labelledby="likedSongsTitle">
         <div class="liked-header">
             <div>
-                <div class="liked-icon">♡</div>
+                <div class="liked-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg></div>
                 <h2 id="likedSongsTitle">Liked Songs</h2>
                 <p>Your favorite songs</p>
             </div>
-            <button class="close-panel" id="closeLikedSongs" type="button" aria-label="Close">×</button>
+            <div class="liked-header-actions">
+                <div class="liked-playback-controls" aria-label="Liked songs playback controls">
+                    <button type="button" id="likedPrevious" aria-label="Previous liked song" title="Previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg></button>
+                    <button type="button" id="likedPlayPause" class="liked-play-toggle" aria-label="Play liked songs" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button>
+                    <button type="button" id="likedNext" aria-label="Next liked song" title="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
+                </div>
+                <button class="close-panel" id="closeLikedSongs" type="button" aria-label="Close">×</button>
+            </div>
         </div>
 
-        <div class="liked-list">
-            <div class="liked-row">
-                <div class="liked-number">1</div>
-                <div class="liked-cover gradient-1">♫</div>
-                <div class="liked-song">
-                    <h3>Blinding Lights</h3>
-                    <p>The Weeknd</p>
-                </div>
-                <button class="liked-heart active" type="button">♥</button>
-            </div>
-
-            <div class="liked-row">
-                <div class="liked-number">2</div>
-                <div class="liked-cover gradient-2">♫</div>
-                <div class="liked-song">
-                    <h3>Starboy</h3>
-                    <p>The Weeknd</p>
-                </div>
-                <button class="liked-heart active" type="button">♥</button>
-            </div>
-
-            <div class="liked-row">
-                <div class="liked-number">3</div>
-                <div class="liked-cover gradient-3">♫</div>
-                <div class="liked-song">
-                    <h3>Night Changes</h3>
-                    <p>One Direction</p>
-                </div>
-                <button class="liked-heart active" type="button">♥</button>
-            </div>
-
-            <div class="liked-row">
-                <div class="liked-number">4</div>
-                <div class="liked-cover gradient-4">♫</div>
-                <div class="liked-song">
-                    <h3>Perfect</h3>
-                    <p>Ed Sheeran</p>
-                </div>
-                <button class="liked-heart active" type="button">♥</button>
-            </div>
+        <div class="liked-list" id="likedSongsList">
+            <p class="library-empty">Songs you like will appear here.</p>
         </div>
     </div>
 </div>

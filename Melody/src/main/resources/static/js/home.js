@@ -2141,7 +2141,7 @@ document.addEventListener(
 
         function showLibrary(title, viewType = "") {
             libraryTitle.textContent = title;
-            libraryList.classList.toggle("artist-directory-grid", viewType === "artists");
+            libraryList.classList.toggle("artist-directory-list", viewType === "artists");
             libraryView.classList.add("open");
             libraryView.setAttribute("aria-hidden", "false");
             document.body.classList.add("library-open");
@@ -2254,19 +2254,25 @@ document.addEventListener(
                 return;
             }
             artists.forEach((artist, index) => {
-                const card = document.createElement("button");
-                card.type = "button";
-                card.className = "artist-card";
-                card.title = artist.name;
+                const row = document.createElement("button");
+                row.type = "button";
+                row.className = "top-artist-row";
+                row.title = artist.name;
                 const avatar = document.createElement("span");
-                avatar.className = `artist-avatar avatar-${String.fromCharCode(97 + (index % 5))}`;
+                avatar.className = `top-artist-avatar avatar-${String.fromCharCode(97 + (index % 5))}`;
                 avatar.textContent = artist.name.trim().charAt(0).toUpperCase();
                 applyArtistPhoto(avatar, artist);
                 const name = document.createElement("strong");
                 name.textContent = artist.name;
-                card.append(avatar, name);
-                card.addEventListener("click", () => openArtistSongs(artist.name, true));
-                libraryList.appendChild(card);
+                const details = document.createElement("span");
+                details.className = "top-artist-details";
+                details.append(name);
+                const arrow = document.createElement("span");
+                arrow.className = "top-artist-arrow";
+                arrow.textContent = "›";
+                row.append(avatar, details, arrow);
+                row.addEventListener("click", () => openArtistSongs(artist.name, true));
+                libraryList.appendChild(row);
             });
         }
 
