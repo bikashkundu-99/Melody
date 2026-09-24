@@ -1268,12 +1268,6 @@ body { background: #0b1427; color:#f4f7fb; }
 #homeNav:hover { background:#1b2a43; color:#efffff; }
 .player { left:0; right:0; }
 .expanded-timeline { width:min(650px,82vw); margin:0 auto; }
-.expanded-timeline-actions { display:flex; align-items:center; justify-content:space-between; width:100%; margin:0 auto 7px; }
-.expanded-timeline-left { display:flex; align-items:center; gap:12px; }
-.expanded-timeline-actions .expanded-like { display:grid; width:40px; height:40px; place-items:center; padding:0; }
-.expanded-timeline-actions .expanded-like svg { display:block; width:21px; height:21px; }
-.expanded-timeline-actions .player-save { display:grid; width:54px; min-width:54px; height:40px; place-items:center; padding:0; line-height:1; }
-.expanded-timeline-actions .expanded-repeat { width:40px; height:40px; flex:0 0 40px; }
 .expanded-progress { width:100%; margin:0; }
 .expanded-controls { width:min(520px,90vw); justify-content:center; gap:22px; }
 .expanded-controls > button { display:grid; place-items:center; flex:0 0 auto; }
@@ -1283,6 +1277,56 @@ body { background: #0b1427; color:#f4f7fb; }
 @media (max-width:600px) {
     .player { left:0; right:0; }
     .expanded-timeline { width:90vw; }
-    .expanded-timeline-actions .expanded-like,.expanded-timeline-actions .expanded-repeat { width:34px; height:34px; flex-basis:34px; }
-    .expanded-timeline-actions .player-save { width:50px; min-width:50px; height:34px; }
+}
+.expanded-controls { width:min(700px,94vw); gap:clamp(8px,2vw,24px); }
+.expanded-controls #expandedSaveButton { margin-left:8px; }
+.expanded-controls .expanded-repeat { width:40px; height:40px; flex:0 0 40px; }
+.expanded-volume { padding:0; border:0 !important; border-radius:0; background:transparent !important; box-shadow:none !important; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.player-artist-link { font-size:12px; }
+.now-playing .player-artist-link { font-size:11px; }
+.expanded-song-info .player-artist-link { font-size:14px; }
+.recent-artist-link,.music-card-artist,.liked-artist-link,.library-artist-link,.library-history-artist { font-size:12px; }
+.liked-song .liked-artist-link { font-size:13px; }
+.song-info p { font-size:12px; }
+.search-result-info small { font-size:12px; }
+.artist-card strong { font-size:12px; }
+@media (max-width:600px) {
+    .expanded-controls { width:94vw; gap:8px; }
+    .expanded-controls .expanded-control,.expanded-controls .expanded-like,.expanded-controls .expanded-repeat { width:34px; height:34px; flex-basis:34px; }
+    .expanded-controls .expanded-play { width:48px; height:48px; flex-basis:48px; }
+    .expanded-controls .player-save { width:48px; min-width:48px; height:36px; }
+    .expanded-controls #expandedSaveButton { margin-left:4px; }
+    .now-playing .player-artist-link { font-size:10px; }
+}
+
+/* Keep Like, Save, and Repeat at the timeline's horizontal positions; align them vertically with transport controls. */
+.expanded-controls {
+    position:relative;
+    width:min(650px,82vw);
+    height:54px;
+    justify-content:center;
+    gap:18px;
+}
+#expandedLikeButton {
+    position:absolute;
+    left:0;
+    top:50%;
+    transform:translateY(-50%);
+}
+#expandedSaveButton {
+    position:absolute;
+    left:52px;
+    top:50%;
+    margin:0;
+    transform:translateY(-50%);
+}
+.expanded-controls .expanded-repeat {
+    position:absolute;
+    top:50%;
+    right:0;
+    margin:0;
+    transform:translateY(-50%);
+}
+@media (max-width:600px) {
+    .expanded-controls { width:90vw; height:48px; }
 }
