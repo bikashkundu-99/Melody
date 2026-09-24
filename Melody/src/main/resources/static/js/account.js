@@ -173,6 +173,85 @@ function groupAccountHistoryByDate(entries) {
     return [...groups.values()].filter(group => group.entries.length);
 }
 
+const accountHistoryThumbnailCache = new Map();
+
+function accountHistoryThumbnailSource(entry) {
+    const knownCovers = {
+        afterhours: "AfterHours.jpg",
+        blindinglights: "BlindingLights.jpg",
+        dieforyou: "DieForYou.jpg",
+        mothtoaflame: "MothToAFlame.jpg",
+        oneofthegirls: "OneOfTheGirls.jpg",
+        saveyourtears: "SaveyourTears.jpg",
+        starboy: "Starboy.jpg"
+    };
+    let source = String(entry?.thumbnailUrl || "").trim().replace(/\\/g, "/");
+    if (!source) {
+        const key = String(entry?.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const filename = knownCovers[key];
+        if (!filename) return "";
+        source = `/images/${filename}`;
+    }
+    if (/^https?:\/\//i.test(source)) return source;
+
+    const staticPath = source.match(/\/static\/(.+)$/i);
+    let webPath = staticPath ? staticPath[1] : source;
+    webPath = webPath.replace(/^\/?src\/main\/resources\//i, "")
+        .replace(/^\/?static\//i, "");
+    const backendOrigin = new URL("http://localhost:8080").origin;
+    return new URL(webPath.startsWith("/") ? webPath : `/${webPath}`, backendOrigin).href;
+}
+
+async function getAccountHistoryThumbnailUrl(source) {
+    const target = new URL(source, "http://localhost:8080/");
+    const backendOrigin = new URL("http://localhost:8080").origin;
+    if (target.origin !== backendOrigin) return target.href;
+
+    if (!accountHistoryThumbnailCache.has(target.href)) {
+        const request = fetch(target.href, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("melody_token") || ""}` }
+        }).then(async response => {
+            if (!response.ok) throw new Error(`Image request failed (${response.status})`);
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType && !contentType.startsWith("image/")) {
+                throw new Error("Thumbnail URL did not return an image.");
+            }
+            return URL.createObjectURL(await response.blob());
+        });
+        accountHistoryThumbnailCache.set(target.href, request);
+        request.catch(() => {
+            if (accountHistoryThumbnailCache.get(target.href) === request) {
+                accountHistoryThumbnailCache.delete(target.href);
+            }
+        });
+    }
+    return accountHistoryThumbnailCache.get(target.href);
+}
+
+function applyAccountHistoryThumbnail(cover, entry) {
+    const source = accountHistoryThumbnailSource(entry);
+    if (!source) return;
+    cover.dataset.thumbnailSource = source;
+    const fallback = String(entry?.title || "♫").trim().charAt(0).toUpperCase() || "♫";
+
+    getAccountHistoryThumbnailUrl(source).then(displayUrl => {
+        if (cover.dataset.thumbnailSource !== source) return;
+        const image = document.createElement("img");
+        image.alt = "";
+        image.loading = "lazy";
+        image.decoding = "async";
+        image.addEventListener("error", () => {
+            if (cover.dataset.thumbnailSource !== source) return;
+            image.remove();
+            cover.textContent = fallback;
+        }, { once: true });
+        cover.replaceChildren(image);
+        image.src = displayUrl;
+    }).catch(error => {
+        console.warn(`Could not load thumbnail for ${entry?.title || "song"}:`, error);
+    });
+}
+
 function openHistory() {
     const panel = document.getElementById("historyPanel");
     const list = document.getElementById("historyList");
@@ -222,6 +301,7 @@ function openHistory() {
                 const cover = document.createElement("div");
                 cover.className = `history-cover history-cover-${((groupIndex + index) % 5) + 1}`;
                 cover.textContent = (entry.title || "♫").trim().charAt(0).toUpperCase();
+                applyAccountHistoryThumbnail(cover, entry);
                 const info = document.createElement("div");
                 info.className = "history-song";
                 const title = document.createElement("strong");

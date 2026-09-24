@@ -365,10 +365,7 @@ function displaySearchResults(songs) {
         const artist = document.createElement("small");
         artist.textContent = song.artist || "Unknown artist";
         info.append(title, artist);
-        const play = document.createElement("span");
-        play.className = "search-result-play";
-        play.textContent = "▶";
-        row.append(cover, info, play);
+        row.append(cover, info);
         row.addEventListener("click", () => {
             const input = document.getElementById("searchInput");
             const panel = document.getElementById("searchResultsPanel");
@@ -470,27 +467,60 @@ function artistPhotoSource(artist) {
     return getFullUrl(value);
 }
 
+function artistFallbackPhotoSource(artist) {
+    const key = String(artist?.name || "").toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
+    const knownPhotos = {
+        theweeknd: "TheWeeknd.jpg",
+        dualipa: "DuaLipa.jpg",
+        jennie: "Jennie.jpg",
+        lilyrosedepp: "LilyRoseDeep.jpg",
+        swedishhousemafia: "SedishHouseMafia.jpg",
+        tameimpala: "TameImpala.jpg"
+    };
+    const filename = knownPhotos[key];
+    return filename ? getFullUrl(`/images/artists/${filename}`) : "";
+}
+
 function applyArtistPhoto(avatar, artist) {
-    const photoSource = artistPhotoSource(artist);
-    if (!avatar || !photoSource) return;
+    if (!avatar) return;
+    const photoSources = [...new Set([
+        artistPhotoSource(artist),
+        artistFallbackPhotoSource(artist)
+    ].filter(Boolean))];
+    if (!photoSources.length) return;
 
-    avatar.dataset.artistPhotoSource = photoSource;
-    getDisplayThumbnailUrl(photoSource).then(displayUrl => {
-        if (avatar.dataset.artistPhotoSource !== photoSource) return;
+    const sourceKey = photoSources.join("|");
+    const initial = String(artist?.name || "?").trim().charAt(0).toUpperCase();
+    avatar.dataset.artistPhotoSource = sourceKey;
 
-        const image = document.createElement("img");
-        image.alt = "";
-        image.loading = "lazy";
-        image.decoding = "async";
-        image.src = displayUrl;
-        image.addEventListener("error", () => {
-            image.remove();
-            avatar.textContent = String(artist?.name || "?").trim().charAt(0).toUpperCase();
-        }, { once: true });
-        avatar.replaceChildren(image);
-    }).catch(error => {
-        console.warn(`Could not load photo for ${artist?.name || "artist"}:`, error);
-    });
+    const tryPhoto = index => {
+        if (avatar.dataset.artistPhotoSource !== sourceKey) return;
+        if (index >= photoSources.length) {
+            avatar.replaceChildren();
+            avatar.textContent = initial;
+            return;
+        }
+
+        getDisplayThumbnailUrl(photoSources[index]).then(displayUrl => {
+            if (avatar.dataset.artistPhotoSource !== sourceKey) return;
+
+            const image = document.createElement("img");
+            image.alt = "";
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.addEventListener("error", () => tryPhoto(index + 1), { once: true });
+            image.src = displayUrl;
+            avatar.replaceChildren(image);
+        }).catch(error => {
+            if (index + 1 < photoSources.length) {
+                tryPhoto(index + 1);
+            } else {
+                console.warn(`Could not load photo for ${artist?.name || "artist"}:`, error);
+            }
+        });
+    };
+
+    tryPhoto(0);
 }
 
 function renderTopArtists() {
@@ -509,7 +539,7 @@ function renderTopArtists() {
         grid.appendChild(empty);
         return;
     }
-    artists.slice(0, 5).forEach((artist, index) => {
+    artists.slice(0, 8).forEach((artist, index) => {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "artist-card";
@@ -2109,8 +2139,9 @@ document.addEventListener(
         const saveToPlaylistModal = document.getElementById("saveToPlaylistModal");
         const savePlaylistOptions = document.getElementById("savePlaylistOptions");
 
-        function showLibrary(title) {
+        function showLibrary(title, viewType = "") {
             libraryTitle.textContent = title;
+            libraryList.classList.toggle("artist-directory-grid", viewType === "artists");
             libraryView.classList.add("open");
             libraryView.setAttribute("aria-hidden", "false");
             document.body.classList.add("library-open");
@@ -2155,7 +2186,7 @@ document.addEventListener(
                 back.className = "library-back-link";
                 back.textContent = "‹ My Library";
                 back.addEventListener("click", openMyLibrary);
-                renderLibrarySongs(detail.songs || []);
+                renderLibrarySongs(detail.songs || [], true);
                 libraryList.prepend(back);
                 showLibrary(detail.playlist.name);
             } catch (error) {
@@ -2214,7 +2245,7 @@ document.addEventListener(
 
         function renderArtistDirectory() {
             libraryList.replaceChildren();
-            const artists = getTopArtists();
+            const artists = getTopArtists().slice(0, 20);
             if (!artists.length) {
                 const empty = document.createElement("p");
                 empty.className = "library-empty";
@@ -2223,24 +2254,19 @@ document.addEventListener(
                 return;
             }
             artists.forEach((artist, index) => {
-                const row = document.createElement("button");
-                row.type = "button";
-                row.className = "top-artist-row";
+                const card = document.createElement("button");
+                card.type = "button";
+                card.className = "artist-card";
+                card.title = artist.name;
                 const avatar = document.createElement("span");
-                avatar.className = `top-artist-avatar avatar-${String.fromCharCode(97 + (index % 5))}`;
-                avatar.textContent = artist.name.charAt(0).toUpperCase();
+                avatar.className = `artist-avatar avatar-${String.fromCharCode(97 + (index % 5))}`;
+                avatar.textContent = artist.name.trim().charAt(0).toUpperCase();
                 applyArtistPhoto(avatar, artist);
                 const name = document.createElement("strong");
                 name.textContent = artist.name;
-                const details = document.createElement("span");
-                details.className = "top-artist-details";
-                details.append(name);
-                const arrow = document.createElement("span");
-                arrow.className = "top-artist-arrow";
-                arrow.textContent = "›";
-                row.append(avatar, details, arrow);
-                row.addEventListener("click", () => openArtistSongs(artist.name, true));
-                libraryList.appendChild(row);
+                card.append(avatar, name);
+                card.addEventListener("click", () => openArtistSongs(artist.name, true));
+                libraryList.appendChild(card);
             });
         }
 
@@ -2277,7 +2303,7 @@ document.addEventListener(
                     recentlyPlayed = await apiCall("/library/recent");
                     renderTopArtists();
                     renderArtistDirectory();
-                    showLibrary("Top 20 artists");
+                    showLibrary("Top 20 artists", "artists");
                 } else {
                     renderLibrarySongs(allSongs.slice(0, 30), true);
                     showLibrary("Made for you");
@@ -2435,6 +2461,7 @@ document.addEventListener(
                         const cover = document.createElement("span");
                         cover.className = `library-history-cover album-${((groupIndex + index) % 4) + 1}`;
                         cover.textContent = String(entry.title || "♫").trim().charAt(0).toUpperCase();
+                        applySongThumbnail(cover, entry);
                         const song = document.createElement("span");
                         song.className = "library-history-song";
                         const title = document.createElement("strong");
