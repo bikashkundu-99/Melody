@@ -1265,3 +1265,24 @@ body { background: #0b1427; color:#f4f7fb; }
 .expanded-controls .expanded-play { width:54px; height:54px; }
 .expanded-controls .expanded-like { width:40px; height:40px; padding:0; }
 .expanded-controls .player-save { display:grid; width:54px; min-width:54px; height:40px; place-items:center; padding:0; line-height:1; }
+#homeNav:hover { background:#1b2a43; color:#efffff; }
+.player { left:0; right:0; }
+.expanded-timeline { width:min(650px,82vw); margin:0 auto; }
+.expanded-timeline-actions { display:flex; align-items:center; justify-content:space-between; width:100%; margin:0 auto 7px; }
+.expanded-timeline-left { display:flex; align-items:center; gap:12px; }
+.expanded-timeline-actions .expanded-like { display:grid; width:40px; height:40px; place-items:center; padding:0; }
+.expanded-timeline-actions .expanded-like svg { display:block; width:21px; height:21px; }
+.expanded-timeline-actions .player-save { display:grid; width:54px; min-width:54px; height:40px; place-items:center; padding:0; line-height:1; }
+.expanded-timeline-actions .expanded-repeat { width:40px; height:40px; flex:0 0 40px; }
+.expanded-progress { width:100%; margin:0; }
+.expanded-controls { width:min(520px,90vw); justify-content:center; gap:22px; }
+.expanded-controls > button { display:grid; place-items:center; flex:0 0 auto; }
+.expanded-controls .expanded-control { width:40px; height:40px; }
+.expanded-controls .expanded-play { width:54px; height:54px; }
+@media (max-width:800px) { .player { left:0; right:0; } }
+@media (max-width:600px) {
+    .player { left:0; right:0; }
+    .expanded-timeline { width:90vw; }
+    .expanded-timeline-actions .expanded-like,.expanded-timeline-actions .expanded-repeat { width:34px; height:34px; flex-basis:34px; }
+    .expanded-timeline-actions .player-save { width:50px; min-width:50px; height:34px; }
+}

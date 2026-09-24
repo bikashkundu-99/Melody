@@ -455,6 +455,8 @@ MOBILE
 /* Melody navy and teal theme */
 body { background:radial-gradient(circle at 15% 15%,rgba(13,147,153,.18),transparent 32%),#0b1427; }
 .logo-icon { background:linear-gradient(135deg,#10c9cf,#3864dc); }
+.logo-icon { border-radius:16px; box-shadow:0 7px 22px #287ce955,inset 0 1px 0 #ffffff70; }
+.logo-icon svg { display:block; width:34px; height:34px; fill:none; stroke:#fff; stroke-width:2.7; stroke-linecap:round; }
 .card { background:rgba(17,29,51,.94); border-color:#263853; box-shadow:0 25px 80px rgba(0,0,0,.5); }
 .tabs { background:#0c172a; }
 .tab.active { background:#1b2d47; color:#fff; }
