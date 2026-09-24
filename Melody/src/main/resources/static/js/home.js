@@ -10,7 +10,7 @@ let searchResults = [];
 let searchRequestId = 0;
 let currentSongIndex = -1;
 let playbackQueue = null;
-let shuffleEnabled = false;
+let repeatMode = "off";
 let currentSong = null;
 let userSelectedSongThisSession = false;
 let recentlyPlayed = [];
@@ -20,6 +20,7 @@ let likedSongIds = new Set();
 let pendingSaveSongId = null;
 const thumbnailCache = new Map();
 const HEART_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg>';
+const REPEAT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg>';
 const PLAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg>';
 const PAUSE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM15 5h4v14h-4z"/></svg>';
 const PREVIOUS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg>';
@@ -481,8 +482,7 @@ function renderRecentlyPlayed() {
 
     const uniqueRecentSongs = uniqueSongsById(recentlyPlayed).slice(0, 4);
     uniqueRecentSongs.forEach((song, index) => {
-        const card = document.createElement("button");
-        card.type = "button";
+        const card = document.createElement("article");
         card.className = "recent-card";
         const cover = document.createElement("span");
         cover.className = `album-small album-${(index % 4) + 1}`;
@@ -492,8 +492,7 @@ function renderRecentlyPlayed() {
         info.className = "song-info";
         const title = document.createElement("strong");
         title.textContent = song.title || "Unknown title";
-        const artist = document.createElement("span");
-        artist.textContent = song.artist || "Unknown artist";
+        const artist = createArtistLink(song.artist, "recent-artist-link");
         info.append(title, artist);
         card.append(cover, info);
         card.addEventListener("click", () => playSong(song, uniqueRecentSongs));
@@ -539,9 +538,7 @@ function bindSongsToMusicCards() {
 
 
         if (description) {
-
-            description.textContent =
-                song.artist || "Unknown artist";
+            description.replaceWith(createArtistLink(song.artist, "music-card-artist"));
         }
 
         applySongThumbnail(card.querySelector(".album"), song);
@@ -1087,18 +1084,72 @@ function playPreviousSong(queue = null) {
    NEXT SONG
 ===================================================== */
 
-function playNextSong(queue = null) {
+function playNextSong(queue = null, automatic = false) {
     if (Array.isArray(queue) && queue.length) playbackQueue = queue;
     const activeQueue = playbackQueue?.length ? playbackQueue : allSongs;
     if (!activeQueue.length) return;
     const activeIndex = activeQueue.findIndex(song => String(song.id) === String(currentSong?.id));
-    if (shuffleEnabled && activeQueue.length > 1) {
-        const candidates = activeQueue.map((_, index) => index).filter(index => index !== activeIndex);
-        currentSongIndex = candidates[Math.floor(Math.random() * candidates.length)];
-    } else {
-        currentSongIndex = activeIndex < 0 || activeIndex >= activeQueue.length - 1 ? 0 : activeIndex + 1;
+
+    if (automatic && repeatMode === "one") {
+        audioPlayer.currentTime = 0;
+        audioPlayer.play().catch(error => console.error("Unable to repeat song:", error));
+        return;
     }
+
+    if (automatic && repeatMode === "off" && activeIndex >= activeQueue.length - 1) {
+        updatePlayButtons(false);
+        return;
+    }
+
+    currentSongIndex = activeIndex < 0 || activeIndex >= activeQueue.length - 1 ? 0 : activeIndex + 1;
     playSong(activeQueue[currentSongIndex], activeQueue);
+}
+
+function createArtistLink(artistName, extraClass = "") {
+    const artist = artistName || "Unknown artist";
+    const link = document.createElement("button");
+    link.type = "button";
+    link.className = `player-artist-link ${extraClass}`.trim();
+    link.textContent = artist;
+    link.title = `See ${artist}'s songs`;
+    link.addEventListener("click", event => {
+        event.stopPropagation();
+        if (artistName) document.dispatchEvent(new CustomEvent("melody:open-artist", { detail: artistName }));
+    });
+    return link;
+}
+
+function groupHistoryByLocalDate(entries) {
+    const groups = new Map();
+    const localKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const todayKey = localKey(today);
+    const yesterdayKey = localKey(yesterday);
+
+    entries.forEach((entry, index) => {
+        const date = new Date(entry.playedAt);
+        if (Number.isNaN(date.getTime())) return;
+        const key = localKey(date);
+        if (!groups.has(key)) {
+            const label = key === todayKey ? "Today"
+                : key === yesterdayKey ? "Yesterday"
+                    : date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+            groups.set(key, { key, label, entries: [], seenSongs: new Set() });
+        }
+        const group = groups.get(key);
+        const songKey = entry.id == null ? `entry-${index}` : String(entry.id);
+        if (group.seenSongs.has(songKey)) return;
+        group.seenSongs.add(songKey);
+        group.entries.push(entry);
+    });
+
+    return [...groups.values()].filter(group => group.entries.length).map(group => ({
+        key: group.key,
+        label: group.label,
+        entries: group.entries
+    }));
 }
 
 
@@ -1112,7 +1163,7 @@ if (audioPlayer) {
         "ended",
         function () {
 
-            playNextSong();
+            playNextSong(null, true);
 
         }
     );
@@ -1957,20 +2008,23 @@ document.addEventListener(
         }));
         syncVolumeUI();
 
-        function syncShuffleUI() {
-            document.querySelectorAll(".shuffle-toggle").forEach(button => {
-                button.classList.toggle("active", shuffleEnabled);
-                button.setAttribute("aria-pressed", String(shuffleEnabled));
-                button.setAttribute("aria-label", shuffleEnabled ? "Shuffle on" : "Shuffle off");
-                button.title = shuffleEnabled ? "Shuffle on" : "Shuffle off";
+        function syncRepeatUI() {
+            document.querySelectorAll(".repeat-toggle").forEach(button => {
+                const active = repeatMode !== "off";
+                button.classList.toggle("active", active);
+                button.classList.toggle("repeat-one", repeatMode === "one");
+                button.setAttribute("aria-pressed", String(active));
+                button.setAttribute("aria-label", `Repeat ${repeatMode}`);
+                button.title = repeatMode === "one" ? "Repeat one" : repeatMode === "all" ? "Repeat all" : "Repeat off";
+                button.innerHTML = `${REPEAT_ICON}${repeatMode === "one" ? '<span class="repeat-one-badge" aria-hidden="true">1</span>' : ""}`;
             });
         }
-        document.querySelectorAll(".shuffle-toggle").forEach(button => button.addEventListener("click", event => {
+        document.querySelectorAll(".repeat-toggle").forEach(button => button.addEventListener("click", event => {
             event.stopPropagation();
-            shuffleEnabled = !shuffleEnabled;
-            syncShuffleUI();
+            repeatMode = repeatMode === "off" ? "all" : repeatMode === "all" ? "one" : "off";
+            syncRepeatUI();
         }));
-        syncShuffleUI();
+        syncRepeatUI();
 
         document.querySelectorAll(".volume").forEach((control) => control.addEventListener("click", (event) => event.stopPropagation()));
 
@@ -2240,7 +2294,7 @@ document.addEventListener(
             const historyTitle = document.createElement("strong");
             historyTitle.textContent = "Listening history";
             const historySubtitle = document.createElement("span");
-            historySubtitle.textContent = "Songs played in the last 3 months";
+            historySubtitle.textContent = "Songs played in the last 30 days";
             const historyArrow = document.createElement("span");
             historyArrow.textContent = "›";
             history.append(historyTitle, historySubtitle, historyArrow);
@@ -2274,7 +2328,7 @@ document.addEventListener(
             loading.className = "library-empty";
             loading.textContent = "Loading your listening history…";
             libraryList.appendChild(loading);
-            showLibrary("Listening history · 3 months");
+            showLibrary("Listening history · Last 30 days");
 
             try {
                 const response = await fetch(`${API_URL}/library/history`, { headers: getAuthHeaders() });
@@ -2284,32 +2338,49 @@ document.addEventListener(
                 if (!response.ok) throw new Error("Could not load listening history.");
                 const entries = await response.json();
                 libraryList.replaceChildren(back);
-                if (!entries.length) {
+                const historyGroups = groupHistoryByLocalDate(entries || []);
+                if (!historyGroups.length) {
                     const empty = document.createElement("p");
                     empty.className = "library-empty";
-                    empty.textContent = "No songs played in the last three months.";
+                    empty.textContent = "No songs played in the last 30 days.";
                     libraryList.appendChild(empty);
                     return;
                 }
-                entries.forEach((entry, index) => {
-                    const row = document.createElement("article");
-                    row.className = "library-history-row";
-                    const cover = document.createElement("span");
-                    cover.className = `library-history-cover album-${(index % 4) + 1}`;
-                    cover.textContent = String(entry.title || "♫").trim().charAt(0).toUpperCase();
-                    const song = document.createElement("span");
-                    song.className = "library-history-song";
-                    const title = document.createElement("strong");
-                    title.textContent = entry.title || "Unknown title";
-                    const artist = document.createElement("small");
-                    artist.textContent = entry.artist || "Unknown artist";
-                    song.append(title, artist);
-                    const playedAt = document.createElement("time");
-                    const date = new Date(entry.playedAt);
-                    playedAt.dateTime = entry.playedAt;
-                    playedAt.textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-                    row.append(cover, song, playedAt);
-                    libraryList.appendChild(row);
+                historyGroups.forEach((group, groupIndex) => {
+                    const section = document.createElement("details");
+                    section.className = "library-history-day";
+                    section.open = group.label === "Today";
+                    const summary = document.createElement("summary");
+                    summary.className = "library-history-day-heading";
+                    const label = document.createElement("strong");
+                    label.textContent = group.label;
+                    const count = document.createElement("small");
+                    count.textContent = `${group.entries.length} ${group.entries.length === 1 ? "song" : "songs"}`;
+                    summary.append(label, count);
+                    const rows = document.createElement("div");
+                    rows.className = "library-history-entries";
+                    group.entries.forEach((entry, index) => {
+                        const row = document.createElement("article");
+                        row.className = "library-history-row";
+                        const cover = document.createElement("span");
+                        cover.className = `library-history-cover album-${((groupIndex + index) % 4) + 1}`;
+                        cover.textContent = String(entry.title || "♫").trim().charAt(0).toUpperCase();
+                        const song = document.createElement("span");
+                        song.className = "library-history-song";
+                        const title = document.createElement("strong");
+                        title.textContent = entry.title || "Unknown title";
+                        const artist = document.createElement("small");
+                        artist.textContent = entry.artist || "Unknown artist";
+                        song.append(title, artist);
+                        const playedAt = document.createElement("time");
+                        const date = new Date(entry.playedAt);
+                        playedAt.dateTime = entry.playedAt;
+                        playedAt.textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+                        row.append(cover, song, playedAt);
+                        rows.appendChild(row);
+                    });
+                    section.append(summary, rows);
+                    libraryList.appendChild(section);
                 });
             } catch (error) {
                 libraryList.replaceChildren(back);
@@ -2324,7 +2395,7 @@ document.addEventListener(
         document.querySelectorAll(".see-all[data-view]").forEach((button) => {
             button.addEventListener("click", () => openLibrary(button.dataset.view));
         });
-        document.addEventListener("melody:open-artist", event => openArtistSongs(event.detail, true));
+        document.addEventListener("melody:open-artist", event => openArtistSongs(event.detail));
         document.getElementById("myLibraryNav")?.addEventListener("click", event => {
             event.preventDefault();
             openMyLibrary();

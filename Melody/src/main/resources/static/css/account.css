@@ -355,3 +355,12 @@ body { background:radial-gradient(circle at 15% 10%,rgba(13,147,153,.18),transpa
 .history-empty { padding:22px 8px; color:#91a0b7; font-size:13px; }
 .history-error { color:#ff9cae; }
 @media (max-width:600px) { .history-panel { padding:16px 12px; } .history-entry { grid-template-columns:40px minmax(0,1fr); } .history-cover { width:40px; height:40px; } .history-entry time { grid-column:2; font-size:10px; } }
+.history-day { margin:5px 0 8px; border:1px solid #ffffff10; border-radius:9px; background:#ffffff05; overflow:hidden; }
+.history-day-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 15px; color:#e8f1fc; cursor:pointer; list-style:none; }
+.history-day-heading::-webkit-details-marker { display:none; }
+.history-day-heading::after { content:"⌄"; margin-left:5px; color:#13c4c8; transition:transform .16s; }
+.history-day[open] > .history-day-heading::after { transform:rotate(180deg); }
+.history-day-heading strong { font-size:13px; }
+.history-day-heading small { margin-left:auto; color:#91a4bc; font-size:10px; }
+.history-day-entries { padding:0 7px 7px; }
+.history-day-entries .history-entry { border-top:1px solid #ffffff09; }

@@ -144,6 +144,35 @@ function toggleAccountDetails() {
    HISTORY
 ===================================================== */
 
+function groupAccountHistoryByDate(entries) {
+    const groups = new Map();
+    const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const todayKey = dateKey(today);
+    const yesterdayKey = dateKey(yesterday);
+
+    entries.forEach((entry, index) => {
+        const date = new Date(entry.playedAt);
+        if (Number.isNaN(date.getTime())) return;
+        const key = dateKey(date);
+        if (!groups.has(key)) {
+            const label = key === todayKey ? "Today"
+                : key === yesterdayKey ? "Yesterday"
+                    : date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+            groups.set(key, { key, label, entries: [], songIds: new Set() });
+        }
+        const group = groups.get(key);
+        const songId = entry.id == null ? `entry-${index}` : String(entry.id);
+        if (group.songIds.has(songId)) return;
+        group.songIds.add(songId);
+        group.entries.push(entry);
+    });
+
+    return [...groups.values()].filter(group => group.entries.length);
+}
+
 function openHistory() {
     const panel = document.getElementById("historyPanel");
     const list = document.getElementById("historyList");
@@ -165,35 +194,52 @@ function openHistory() {
     }).then(entries => {
         if (!entries) return;
         list.replaceChildren();
-        if (!entries.length) {
+        const groups = groupAccountHistoryByDate(entries || []);
+        if (!groups.length) {
             const empty = document.createElement("p");
             empty.className = "history-empty";
-            empty.textContent = "No songs played in the last three months.";
+            empty.textContent = "No songs played in the last 30 days.";
             list.appendChild(empty);
             return;
         }
 
-        entries.forEach((entry, index) => {
-            const row = document.createElement("article");
-            row.className = "history-entry";
-            const cover = document.createElement("div");
-            cover.className = `history-cover history-cover-${(index % 5) + 1}`;
-            cover.textContent = (entry.title || "♫").trim().charAt(0).toUpperCase();
-            const info = document.createElement("div");
-            info.className = "history-song";
-            const title = document.createElement("strong");
-            title.textContent = entry.title || "Unknown title";
-            const artist = document.createElement("span");
-            artist.textContent = entry.artist || "Unknown artist";
-            info.append(title, artist);
-            const playedAt = document.createElement("time");
-            const date = new Date(entry.playedAt);
-            playedAt.dateTime = entry.playedAt;
-            playedAt.textContent = Number.isNaN(date.getTime())
-                ? ""
-                : date.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-            row.append(cover, info, playedAt);
-            list.appendChild(row);
+        groups.forEach((group, groupIndex) => {
+            const section = document.createElement("details");
+            section.className = "history-day";
+            section.open = group.label === "Today";
+            const summary = document.createElement("summary");
+            summary.className = "history-day-heading";
+            const label = document.createElement("strong");
+            label.textContent = group.label;
+            const count = document.createElement("small");
+            count.textContent = `${group.entries.length} ${group.entries.length === 1 ? "song" : "songs"}`;
+            summary.append(label, count);
+            const rows = document.createElement("div");
+            rows.className = "history-day-entries";
+            group.entries.forEach((entry, index) => {
+                const row = document.createElement("article");
+                row.className = "history-entry";
+                const cover = document.createElement("div");
+                cover.className = `history-cover history-cover-${((groupIndex + index) % 5) + 1}`;
+                cover.textContent = (entry.title || "♫").trim().charAt(0).toUpperCase();
+                const info = document.createElement("div");
+                info.className = "history-song";
+                const title = document.createElement("strong");
+                title.textContent = entry.title || "Unknown title";
+                const artist = document.createElement("span");
+                artist.textContent = entry.artist || "Unknown artist";
+                info.append(title, artist);
+                const playedAt = document.createElement("time");
+                const date = new Date(entry.playedAt);
+                playedAt.dateTime = entry.playedAt;
+                playedAt.textContent = Number.isNaN(date.getTime())
+                    ? ""
+                    : date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+                row.append(cover, info, playedAt);
+                rows.appendChild(row);
+            });
+            section.append(summary, rows);
+            list.appendChild(section);
         });
     }).catch(error => {
         list.replaceChildren();

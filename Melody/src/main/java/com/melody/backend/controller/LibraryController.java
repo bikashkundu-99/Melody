@@ -63,8 +63,8 @@ public class LibraryController {
 
     @GetMapping("/history")
     public List<ListeningHistoryEntry> getListeningHistory(@AuthenticationPrincipal User user) {
-        LocalDateTime threeMonthsAgo = LocalDateTime.now().minusMonths(3);
-        return recentlyPlayed.findByUser_IdAndPlayedAtGreaterThanEqualOrderByPlayedAtDesc(user.getId(), threeMonthsAgo)
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        return recentlyPlayed.findByUser_IdAndPlayedAtGreaterThanEqualOrderByPlayedAtDesc(user.getId(), thirtyDaysAgo)
                 .stream().map(ListeningHistoryEntry::from).toList();
     }
 
