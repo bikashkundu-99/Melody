@@ -36,6 +36,12 @@
         <div class="search">
             <span class="search-icon">⌕</span>
             <input type="text" id="searchInput" placeholder="Search songs, artists, albums...">
+            <button type="button" class="voice-search-button" id="microphoneButton" aria-label="Search by voice" aria-pressed="false" title="Search by voice">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" />
+                    <path d="M19 11a7 7 0 0 1-14 0M12 18v4m-4 0h8" />
+                </svg>
+            </button>
             <section class="search-results-panel" id="searchResultsPanel" aria-live="polite" hidden>
                 <h2>Search results</h2>
                 <div class="search-results-grid" id="searchResultsGrid"></div>

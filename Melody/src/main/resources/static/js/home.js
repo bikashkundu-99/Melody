@@ -1365,6 +1365,70 @@ document.addEventListener(
             );
         }
 
+        const microphoneButton = document.getElementById("microphoneButton");
+        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (microphoneButton && !SpeechRecognitionAPI) {
+            microphoneButton.hidden = true;
+        } else if (microphoneButton && searchInput) {
+            const recognition = new SpeechRecognitionAPI();
+            let voiceSearchActive = false;
+            let voiceSearchError = false;
+
+            recognition.lang = "en-IN";
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            const resetVoiceSearchButton = () => {
+                voiceSearchActive = false;
+                microphoneButton.classList.remove("is-listening");
+                microphoneButton.setAttribute("aria-pressed", "false");
+            };
+
+            recognition.onresult = event => {
+                const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+                if (!transcript) return;
+
+                searchInput.value = transcript;
+                searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+                searchInput.focus();
+                searchInput.setSelectionRange(transcript.length, transcript.length);
+            };
+
+            recognition.onerror = event => {
+                voiceSearchError = true;
+                resetVoiceSearchButton();
+                microphoneButton.title = event.error === "not-allowed"
+                    ? "Allow microphone access to use voice search"
+                    : `Voice search error: ${event.error}`;
+            };
+
+            recognition.onend = () => {
+                resetVoiceSearchButton();
+                if (!voiceSearchError) microphoneButton.title = "Search by voice";
+            };
+
+            microphoneButton.addEventListener("click", () => {
+                if (voiceSearchActive) {
+                    recognition.stop();
+                    return;
+                }
+
+                try {
+                    voiceSearchError = false;
+                    microphoneButton.title = "Listening… Click to stop";
+                    voiceSearchActive = true;
+                    microphoneButton.classList.add("is-listening");
+                    microphoneButton.setAttribute("aria-pressed", "true");
+                    recognition.start();
+                } catch (error) {
+                    resetVoiceSearchButton();
+                    console.warn("Voice search could not start:", error);
+                }
+            });
+        }
+
 
         /* =================================================
            PLAYER OPEN

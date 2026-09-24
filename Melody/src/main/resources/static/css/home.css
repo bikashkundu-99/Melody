@@ -1330,3 +1330,44 @@ body { background: #0b1427; color:#f4f7fb; }
 @media (max-width:600px) {
     .expanded-controls { width:90vw; height:48px; }
 }
+
+/* Voice search button inside the search field. */
+.search input { padding-right:52px; }
+.voice-search-button {
+    position:absolute;
+    top:50%;
+    right:9px;
+    display:grid;
+    width:32px;
+    height:32px;
+    place-items:center;
+    padding:0;
+    border:0;
+    border-radius:50%;
+    background:transparent;
+    color:#b8c7dc;
+    cursor:pointer;
+    transform:translateY(-50%);
+    transition:background .18s ease,color .18s ease,box-shadow .18s ease;
+}
+.voice-search-button svg {
+    width:19px;
+    height:19px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+}
+.voice-search-button:hover,
+.voice-search-button:focus-visible {
+    color:#fff;
+    background:#ffffff16;
+    outline:none;
+}
+.voice-search-button.is-listening {
+    color:#72eee4;
+    background:#3edbd51c;
+    box-shadow:0 0 0 4px #3edbd512,0 0 16px #3edbd566;
+}
+.voice-search-button[hidden] { display:none; }
