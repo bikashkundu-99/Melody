@@ -13,6 +13,9 @@ let playbackQueue = null;
 let repeatMode = "off";
 let currentSong = null;
 let userSelectedSongThisSession = false;
+let restoredPlaybackSongId = null;
+let restoredPlaybackPositionSeconds = 0;
+let restoredPlaybackDurationSeconds = 0;
 let recentlyPlayed = [];
 let artistDirectory = [];
 let artistDirectoryLoaded = false;
@@ -60,19 +63,47 @@ function getLastSongStorageKey() {
     }
 }
 
-function saveLastPlayedSong(song) {
+function readLastPlaybackState() {
+    const key = getLastSongStorageKey();
+    if (!key) return null;
+    try {
+        const saved = JSON.parse(localStorage.getItem(key) || "null");
+        if (!saved) return null;
+        return {
+            song: saved.song || saved,
+            positionSeconds: Math.max(0, Number(saved.positionSeconds ?? saved.playbackPositionSeconds) || 0),
+            durationSeconds: Math.max(0, Number(saved.durationSeconds) || 0)
+        };
+    } catch (error) {
+        console.warn("Could not read saved playback state:", error);
+        return null;
+    }
+}
+
+function saveLastPlayedSong(song, positionSeconds = 0, durationSeconds = 0) {
     const key = getLastSongStorageKey();
     if (!key || !song) return;
-    try { localStorage.setItem(key, JSON.stringify(song)); } catch (error) { console.warn("Could not save the last played song:", error); }
+    const position = Math.max(0, Number(positionSeconds) || 0);
+    const duration = Math.max(0, Number(durationSeconds) || 0);
+    restoredPlaybackSongId = String(song.id);
+    restoredPlaybackPositionSeconds = position;
+    restoredPlaybackDurationSeconds = duration;
+    try {
+        localStorage.setItem(key, JSON.stringify({ song, positionSeconds: position, durationSeconds: duration }));
+    } catch (error) {
+        console.warn("Could not save playback state:", error);
+    }
 }
 
 function restoreLastPlayedSong(song = null) {
-    if (!song) {
-        const key = getLastSongStorageKey();
-        if (!key) return;
-        try { song = JSON.parse(localStorage.getItem(key) || "null"); } catch (error) { song = null; }
-    }
+    const savedState = readLastPlaybackState();
+    if (!song) song = savedState?.song || null;
     if (!song?.id) return;
+    const savedStateMatchesSong = savedState?.song?.id != null
+        && String(savedState.song.id) === String(song.id);
+    restoredPlaybackSongId = String(song.id);
+    restoredPlaybackPositionSeconds = savedStateMatchesSong ? savedState.positionSeconds : 0;
+    restoredPlaybackDurationSeconds = savedStateMatchesSong ? savedState.durationSeconds : 0;
     const savedSong = song;
     currentSong = allSongs.find(item => String(item.id) === String(savedSong.id)) || savedSong;
     if (allSongs.length && !playbackQueue) playbackQueue = allSongs;
@@ -80,7 +111,7 @@ function restoreLastPlayedSong(song = null) {
     currentSongIndex = activeQueue.findIndex(item => String(item.id) === String(currentSong.id));
     updatePlayerUI(currentSong);
     updatePlayButtons(false);
-    syncProgressUI(0);
+    syncProgressUI();
 }
 
 
@@ -669,7 +700,22 @@ const seekSliders = document.querySelectorAll(".seek-slider");
 let progressAnimationFrame = 0;
 let playbackRequestId = 0;
 let activeAudioObjectUrl = null;
+let activeAudioSongId = null;
 let playbackNoticeTimer = null;
+let lastPlaybackSaveAt = 0;
+
+function saveCurrentPlaybackPosition() {
+    if (!currentSong) return;
+    if (activeAudioSongId && activeAudioSongId !== String(currentSong.id)) return;
+
+    let position = restoredPlaybackPositionSeconds;
+    let duration = restoredPlaybackDurationSeconds;
+    if (activeAudioSongId) {
+        if (Number.isFinite(audioPlayer.currentTime)) position = audioPlayer.currentTime;
+        if (Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0) duration = audioPlayer.duration;
+    }
+    saveLastPlayedSong(currentSong, position, duration);
+}
 
 function showPlaybackNotice(message) {
     let notice = document.getElementById("playbackNotice");
@@ -697,10 +743,16 @@ function formatTime(seconds) {
 }
 function syncProgressUI(progressOverride = null) {
     if (progressOverride !== null && !Number.isFinite(Number(progressOverride))) progressOverride = null;
-    const duration = Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : 0;
+    const hasAudioMetadata = Boolean(audioPlayer.currentSrc || audioPlayer.getAttribute("src"))
+        && audioPlayer.readyState >= 1;
+    const duration = hasAudioMetadata && Number.isFinite(audioPlayer.duration)
+        ? audioPlayer.duration
+        : restoredPlaybackDurationSeconds;
     const current = progressOverride !== null && duration > 0
         ? Number(progressOverride) / 1000 * duration
-        : (Number.isFinite(audioPlayer.currentTime) ? audioPlayer.currentTime : 0);
+        : (hasAudioMetadata && Number.isFinite(audioPlayer.currentTime)
+            ? audioPlayer.currentTime
+            : restoredPlaybackPositionSeconds);
     const progress = progressOverride !== null
         ? Math.max(0, Math.min(1000, Number(progressOverride)))
         : (duration ? Math.max(0, Math.min(1000, Math.round(current / duration * 1000))) : 0);
@@ -709,6 +761,23 @@ function syncProgressUI(progressOverride = null) {
     seekSliders.forEach((slider) => {
         slider.value = String(progress);
         slider.style.background = `linear-gradient(to right,var(--teal) ${progress / 10}%,#52627a ${progress / 10}%)`;
+    });
+}
+function waitForAudioMetadata() {
+    if (audioPlayer.readyState >= 1) return Promise.resolve(true);
+    return new Promise(resolve => {
+        let timeoutId;
+        const cleanup = result => {
+            clearTimeout(timeoutId);
+            audioPlayer.removeEventListener("loadedmetadata", onLoaded);
+            audioPlayer.removeEventListener("error", onError);
+            resolve(result);
+        };
+        const onLoaded = () => cleanup(true);
+        const onError = () => cleanup(false);
+        audioPlayer.addEventListener("loadedmetadata", onLoaded, { once: true });
+        audioPlayer.addEventListener("error", onError, { once: true });
+        timeoutId = setTimeout(() => cleanup(false), 12000);
     });
 }
 function followAudioProgress() {
@@ -737,8 +806,20 @@ audioPlayer.addEventListener("play", () => {
 audioPlayer.addEventListener("pause", () => {
     cancelAnimationFrame(progressAnimationFrame);
     syncProgressUI();
+    saveCurrentPlaybackPosition();
 });
+audioPlayer.addEventListener("timeupdate", () => {
+    const now = Date.now();
+    if (now - lastPlaybackSaveAt < 1000) return;
+    lastPlaybackSaveAt = now;
+    saveCurrentPlaybackPosition();
+});
+audioPlayer.addEventListener("seeked", saveCurrentPlaybackPosition);
 audioPlayer.addEventListener("ended", () => syncProgressUI());
+window.addEventListener("pagehide", saveCurrentPlaybackPosition);
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") saveCurrentPlaybackPosition();
+});
 audioPlayer.addEventListener("error", () => {
     if (!audioPlayer.src) return;
     const reason = audioPlayer.error?.message || "The audio file could not be decoded or loaded.";
@@ -770,13 +851,14 @@ async function playSong(song, queue = null) {
     }
 
     userSelectedSongThisSession = true;
+    const isRestoredSong = restoredPlaybackSongId === String(song.id);
+    const resumePosition = isRestoredSong ? restoredPlaybackPositionSeconds : 0;
+    const resumeDuration = isRestoredSong ? restoredPlaybackDurationSeconds : 0;
 
 
     const belongsToAllSongs = allSongs.some(item => String(item.id) === String(song.id));
     if (Array.isArray(queue) && queue.length) playbackQueue = queue;
     else if (!playbackQueue?.some(item => String(item.id) === String(song.id)) && belongsToAllSongs) playbackQueue = allSongs;
-
-    currentSong = song;
 
 
     /*
@@ -806,14 +888,20 @@ async function playSong(song, queue = null) {
     );
 
 
+    saveCurrentPlaybackPosition();
     audioPlayer.pause();
     audioPlayer.removeAttribute("src");
     audioPlayer.load();
+    activeAudioSongId = null;
     if (activeAudioObjectUrl) {
         URL.revokeObjectURL(activeAudioObjectUrl);
         activeAudioObjectUrl = null;
     }
-    syncProgressUI(0);
+    currentSong = song;
+    restoredPlaybackSongId = String(song.id);
+    restoredPlaybackPositionSeconds = resumePosition;
+    restoredPlaybackDurationSeconds = resumeDuration;
+    syncProgressUI();
 
     showPlaybackNotice(`Loading ${song.title || "song"}…`);
 
@@ -856,10 +944,18 @@ async function playSong(song, queue = null) {
 
         audioPlayer.src = playableUrl;
         audioPlayer.load();
+        activeAudioSongId = String(song.id);
+        if (resumePosition > 0) {
+            const metadataReady = await waitForAudioMetadata();
+            if (requestId !== playbackRequestId) return;
+            if (metadataReady && Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0) {
+                audioPlayer.currentTime = Math.min(resumePosition, Math.max(0, audioPlayer.duration - 0.25));
+            }
+        }
         await audioPlayer.play();
 
         if (requestId !== playbackRequestId) return;
-        saveLastPlayedSong(song);
+        saveLastPlayedSong(song, audioPlayer.currentTime, audioPlayer.duration);
         recentlyPlayed = [song, ...recentlyPlayed];
         renderRecentlyPlayed();
         renderTopArtists();
@@ -2559,7 +2655,7 @@ document.addEventListener(
                 renderTopArtists();
                 if (!userSelectedSongThisSession && !currentSong && songs.length) {
                     restoreLastPlayedSong(songs[0]);
-                    saveLastPlayedSong(songs[0]);
+                    saveLastPlayedSong(songs[0], restoredPlaybackPositionSeconds, restoredPlaybackDurationSeconds);
                 }
             })
             .catch(error => console.error("Could not load listening history:", error));
