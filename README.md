@@ -1,6 +1,6 @@
 MELODY
 
-Music Streaming Web Application — GitHub README
+Music Streaming Web Application
 
 1. Project Overview
 Melody is a full-stack music streaming web application with a modern Spotify/YouTube Music-inspired experience. It includes authentication, music discovery, search, playback, liked songs, playlists, recently played music, lyrics, and an expandable music player.
