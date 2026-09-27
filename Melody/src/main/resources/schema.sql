@@ -273,9 +273,17 @@ BEGIN
         user_id BIGINT NOT NULL,
         song_id BIGINT NOT NULL,
         played_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        playback_position_seconds FLOAT NULL,
         CONSTRAINT FK_recently_played_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
         CONSTRAINT FK_recently_played_song FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
     );
+END;
+GO
+
+-- Add playback position to existing listening-history tables.
+IF COL_LENGTH('dbo.recently_played', 'playback_position_seconds') IS NULL
+BEGIN
+    ALTER TABLE dbo.recently_played ADD playback_position_seconds FLOAT NULL;
 END;
 GO
 

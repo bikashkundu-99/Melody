@@ -21,6 +21,9 @@ public class RecentlyPlayed {
     @Column(name = "played_at", nullable = false)
     private LocalDateTime playedAt;
 
+    @Column(name = "playback_position_seconds")
+    private Double playbackPositionSeconds;
+
     @PrePersist
     void onCreate() { if (playedAt == null) playedAt = LocalDateTime.now(); }
 
@@ -30,4 +33,6 @@ public class RecentlyPlayed {
     public Song getSong() { return song; }
     public void setSong(Song song) { this.song = song; }
     public LocalDateTime getPlayedAt() { return playedAt; }
+    public Double getPlaybackPositionSeconds() { return playbackPositionSeconds; }
+    public void setPlaybackPositionSeconds(Double playbackPositionSeconds) { this.playbackPositionSeconds = playbackPositionSeconds; }
 }

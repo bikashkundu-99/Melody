@@ -1,3 +1,4 @@
+com\melody\backend\controller\LibraryController$PlaybackPositionRequest.class
 com\melody\backend\service\JwtService.class
 com\melody\backend\repository\PlaylistSongRepository.class
 com\melody\backend\controller\ArtistController.class
@@ -21,6 +22,7 @@ com\melody\backend\entity\LoginAttempt.class
 com\melody\backend\entity\PasswordResetToken.class
 com\melody\backend\repository\LoginAttemptRepository.class
 com\melody\backend\dto\PlaylistSummary.class
+com\melody\backend\controller\LibraryController$PlaybackStateResponse.class
 com\melody\backend\repository\ArtistRepository.class
 com\melody\backend\entity\Song.class
 com\melody\backend\dto\ListeningHistoryEntry.class

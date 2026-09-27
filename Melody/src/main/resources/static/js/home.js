@@ -16,6 +16,8 @@ let userSelectedSongThisSession = false;
 let restoredPlaybackSongId = null;
 let restoredPlaybackPositionSeconds = 0;
 let restoredPlaybackDurationSeconds = 0;
+let serverPlaybackStateLoaded = false;
+let lastServerPlaybackSaveAt = 0;
 let recentlyPlayed = [];
 let artistDirectory = [];
 let artistDirectoryLoaded = false;
@@ -33,6 +35,7 @@ const PREVIOUS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5
 const NEXT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg>';
 const VOLUME_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4zM17 9a5 5 0 0 1 0 6"/></svg>';
 const MUTED_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4zM17 9l5 6m0-6-5 6"/></svg>';
+const REMOVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg>';
 
 
 /* =====================================================
@@ -95,15 +98,19 @@ function saveLastPlayedSong(song, positionSeconds = 0, durationSeconds = 0) {
     }
 }
 
-function restoreLastPlayedSong(song = null) {
+function restoreLastPlayedSong(song = null, positionSeconds = null, durationSeconds = null) {
     const savedState = readLastPlaybackState();
     if (!song) song = savedState?.song || null;
     if (!song?.id) return;
     const savedStateMatchesSong = savedState?.song?.id != null
         && String(savedState.song.id) === String(song.id);
     restoredPlaybackSongId = String(song.id);
-    restoredPlaybackPositionSeconds = savedStateMatchesSong ? savedState.positionSeconds : 0;
-    restoredPlaybackDurationSeconds = savedStateMatchesSong ? savedState.durationSeconds : 0;
+    restoredPlaybackPositionSeconds = positionSeconds !== null
+        ? Math.max(0, Number(positionSeconds) || 0)
+        : savedStateMatchesSong ? savedState.positionSeconds : 0;
+    restoredPlaybackDurationSeconds = durationSeconds !== null
+        ? Math.max(0, Number(durationSeconds) || 0)
+        : savedStateMatchesSong ? savedState.durationSeconds : 0;
     const savedSong = song;
     currentSong = allSongs.find(item => String(item.id) === String(savedSong.id)) || savedSong;
     if (allSongs.length && !playbackQueue) playbackQueue = allSongs;
@@ -363,6 +370,42 @@ async function loadSongs() {
     }
 }
 
+async function loadServerPlaybackState() {
+    let state;
+    try {
+        state = await apiCall("/library/playback-state");
+    } catch (error) {
+        console.error("Could not load account playback state:", error);
+        return;
+    }
+
+    serverPlaybackStateLoaded = true;
+    if (!state?.songId || userSelectedSongThisSession) return;
+
+    const cachedState = readLastPlaybackState();
+    const song = allSongs.find(item => String(item.id) === String(state.songId)) || {
+        id: state.songId,
+        title: state.title,
+        artist: state.artist,
+        album: state.album,
+        audioUrl: state.audioUrl,
+        thumbnailUrl: state.thumbnailUrl,
+        durationSeconds: state.durationSeconds
+    };
+    const cachedStateMatchesSong = cachedState?.song?.id != null
+        && String(cachedState.song.id) === String(state.songId);
+    const position = state.positionSeconds == null
+        ? (cachedStateMatchesSong ? cachedState.positionSeconds : 0)
+        : Math.max(0, Number(state.positionSeconds) || 0);
+    const duration = Number(state.durationSeconds)
+        || Number(song.durationSeconds)
+        || (cachedStateMatchesSong ? cachedState.durationSeconds : 0);
+
+    restoreLastPlayedSong(song, position, duration);
+    saveLastPlayedSong(currentSong, position, duration);
+    if (state.positionSeconds == null && position > 0) saveCurrentPlaybackPosition(true);
+}
+
 
 /* =====================================================
    DISPLAY SEARCH RESULTS
@@ -381,9 +424,19 @@ function displaySearchResults(songs) {
         grid.appendChild(empty);
         return;
     }
+    function closeSearchResults() {
+        const input = document.getElementById("searchInput");
+        const panel = document.getElementById("searchResultsPanel");
+        const resultsGrid = document.getElementById("searchResultsGrid");
+        if (input) input.value = "";
+        searchRequestId++;
+        searchResults = [];
+        if (panel) panel.hidden = true;
+        if (resultsGrid) resultsGrid.replaceChildren();
+    }
+
     songs.forEach((song, index) => {
-        const row = document.createElement("button");
-        row.type = "button";
+        const row = document.createElement("div");
         row.className = "search-result-row";
         const cover = document.createElement("span");
         cover.className = `search-result-cover album-${(index % 4) + 1}`;
@@ -393,19 +446,11 @@ function displaySearchResults(songs) {
         info.className = "search-result-info";
         const title = document.createElement("strong");
         title.textContent = song.title || "Unknown title";
-        const artist = document.createElement("small");
-        artist.textContent = song.artist || "Unknown artist";
+        const artist = createArtistLink(song.artist, "search-result-artist", closeSearchResults);
         info.append(title, artist);
         row.append(cover, info);
         row.addEventListener("click", () => {
-            const input = document.getElementById("searchInput");
-            const panel = document.getElementById("searchResultsPanel");
-            const grid = document.getElementById("searchResultsGrid");
-            if (input) input.value = "";
-            searchRequestId++;
-            searchResults = [];
-            if (panel) panel.hidden = true;
-            if (grid) grid.replaceChildren();
+            closeSearchResults();
             playSong(song, songs);
         });
         grid.appendChild(row);
@@ -704,7 +749,7 @@ let activeAudioSongId = null;
 let playbackNoticeTimer = null;
 let lastPlaybackSaveAt = 0;
 
-function saveCurrentPlaybackPosition() {
+function saveCurrentPlaybackPosition(forceRemote = false) {
     if (!currentSong) return;
     if (activeAudioSongId && activeAudioSongId !== String(currentSong.id)) return;
 
@@ -715,6 +760,16 @@ function saveCurrentPlaybackPosition() {
         if (Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0) duration = audioPlayer.duration;
     }
     saveLastPlayedSong(currentSong, position, duration);
+
+    if (!getToken() || (!serverPlaybackStateLoaded && activeAudioSongId !== String(currentSong.id))) return;
+    const now = Date.now();
+    if (!forceRemote && now - lastServerPlaybackSaveAt < 5000) return;
+    lastServerPlaybackSaveAt = now;
+    apiCall("/library/playback-state", {
+        method: "PUT",
+        body: { songId: Number(currentSong.id), positionSeconds: position },
+        keepalive: forceRemote
+    }).catch(error => console.error("Could not sync playback position:", error));
 }
 
 function showPlaybackNotice(message) {
@@ -806,7 +861,7 @@ audioPlayer.addEventListener("play", () => {
 audioPlayer.addEventListener("pause", () => {
     cancelAnimationFrame(progressAnimationFrame);
     syncProgressUI();
-    saveCurrentPlaybackPosition();
+    saveCurrentPlaybackPosition(true);
 });
 audioPlayer.addEventListener("timeupdate", () => {
     const now = Date.now();
@@ -814,11 +869,11 @@ audioPlayer.addEventListener("timeupdate", () => {
     lastPlaybackSaveAt = now;
     saveCurrentPlaybackPosition();
 });
-audioPlayer.addEventListener("seeked", saveCurrentPlaybackPosition);
+audioPlayer.addEventListener("seeked", () => saveCurrentPlaybackPosition(true));
 audioPlayer.addEventListener("ended", () => syncProgressUI());
-window.addEventListener("pagehide", saveCurrentPlaybackPosition);
+window.addEventListener("pagehide", () => saveCurrentPlaybackPosition(true));
 document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") saveCurrentPlaybackPosition();
+    if (document.visibilityState === "hidden") saveCurrentPlaybackPosition(true);
 });
 audioPlayer.addEventListener("error", () => {
     if (!audioPlayer.src) return;
@@ -963,6 +1018,10 @@ async function playSong(song, queue = null) {
         updatePlayButtons(true);
         showPlaybackNotice(`Playing ${song.title || "song"}`);
         apiCall(`/library/recent/${song.id}`, { method: "POST" })
+            .then(() => {
+                serverPlaybackStateLoaded = true;
+                saveCurrentPlaybackPosition(true);
+            })
             .catch(error => console.error("Could not save listening history:", error));
     } catch (error) {
         if (requestId !== playbackRequestId) return;
@@ -976,6 +1035,38 @@ async function playSong(song, queue = null) {
 /* =====================================================
    PLAYER UI
 ===================================================== */
+
+function renderNowPlayingArtist(el, artistName) {
+    if (!el) return;
+    el.replaceChildren();
+    el.removeAttribute("title");
+
+    const raw = String(artistName || "").trim();
+    if (!raw) {
+        el.textContent = "Unknown artist";
+        return;
+    }
+
+    const parts = raw.split(/(,\s*|\s+&\s+)/).filter(part => part !== "");
+    parts.forEach(part => {
+        if (/^(,\s*|\s+&\s+)$/.test(part)) {
+            el.appendChild(document.createTextNode(part));
+            return;
+        }
+        const name = part.trim();
+        if (!name) return;
+        const link = document.createElement("button");
+        link.type = "button";
+        link.className = "now-playing-artist";
+        link.textContent = name;
+        link.title = `See ${name}'s songs`;
+        link.addEventListener("click", event => {
+            event.stopPropagation();
+            document.dispatchEvent(new CustomEvent("melody:open-artist", { detail: name }));
+        });
+        el.appendChild(link);
+    });
+}
 
 function updatePlayerUI(song) {
 
@@ -1009,8 +1100,7 @@ function updatePlayerUI(song) {
 
 
     if (playerArtist) {
-        playerArtist.textContent = artist;
-        playerArtist.title = `See ${artist}'s songs`;
+        renderNowPlayingArtist(playerArtist, artist);
     }
 
 
@@ -1045,8 +1135,7 @@ function updatePlayerUI(song) {
 
 
     if (expandedArtist) {
-        expandedArtist.textContent = artist;
-        expandedArtist.title = `See ${artist}'s songs`;
+        renderNowPlayingArtist(expandedArtist, artist);
     }
 
 
@@ -1260,18 +1349,44 @@ function playNextSong(queue = null, automatic = false) {
     playSong(activeQueue[currentSongIndex], activeQueue);
 }
 
-function createArtistLink(artistName, extraClass = "") {
-    const artist = artistName || "Unknown artist";
-    const link = document.createElement("button");
-    link.type = "button";
-    link.className = `player-artist-link ${extraClass}`.trim();
-    link.textContent = artist;
-    link.title = `See ${artist}'s songs`;
-    link.addEventListener("click", event => {
-        event.stopPropagation();
-        if (artistName) document.dispatchEvent(new CustomEvent("melody:open-artist", { detail: artistName }));
+function createArtistLink(artistName, extraClass = "", onSelect = null) {
+    const container = document.createElement("span");
+    container.className = `artist-links ${extraClass}`.trim();
+
+    const raw = String(artistName || "").trim();
+    if (!raw) {
+        const empty = document.createElement("span");
+        empty.className = "player-artist-link";
+        empty.textContent = "Unknown artist";
+        container.appendChild(empty);
+        return container;
+    }
+
+    // A song can credit several artists in one field, e.g.
+    // "The Weeknd, JENNIE & Lily Rose". Split on the separators
+    // but keep them (as plain text) so each name gets its own link.
+    const parts = raw.split(/(,\s*|\s+&\s+)/).filter(part => part !== "");
+    parts.forEach(part => {
+        if (/^(,\s*|\s+&\s+)$/.test(part)) {
+            container.appendChild(document.createTextNode(part));
+            return;
+        }
+        const name = part.trim();
+        if (!name) return;
+        const link = document.createElement("button");
+        link.type = "button";
+        link.className = "player-artist-link";
+        link.textContent = name;
+        link.title = `See ${name}'s songs`;
+        link.addEventListener("click", event => {
+            event.stopPropagation();
+            document.dispatchEvent(new CustomEvent("melody:open-artist", { detail: name }));
+            if (typeof onSelect === "function") onSelect(name);
+        });
+        container.appendChild(link);
     });
-    return link;
+
+    return container;
 }
 
 function groupHistoryByLocalDate(entries) {
@@ -1346,26 +1461,54 @@ if (audioPlayer) {
 
 
 /* =====================================================
-   OPEN ACCOUNT PAGE
+   ACCOUNT (merged from account.js)
+   Reads the signed-in user the same way the old account
+   page did: stored profile first, JWT payload as a fallback.
 ===================================================== */
 
-function openAccountPage() {
+function getLoggedInUser() {
 
     const userData =
         localStorage.getItem("melody_user");
 
-
-    if (!userData) {
-
-        window.location.href =
-            "index.html";
-
-        return;
+    if (userData) {
+        try {
+            const parsedUser = JSON.parse(userData);
+            if (parsedUser && typeof parsedUser === "object") return parsedUser;
+        } catch (error) {
+            console.error("Invalid user data:", error);
+        }
     }
 
+    const token = getToken();
+    if (!token) return null;
+    try {
+        const rawPayload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const encodedPayload = rawPayload + "=".repeat((4 - rawPayload.length % 4) % 4);
+        const payload = JSON.parse(atob(encodedPayload));
+        return { id: payload.userId, name: payload.name, email: payload.sub };
+    } catch (error) {
+        console.error("Could not read account details from the sign-in token:", error);
+        return null;
+    }
+}
 
-    window.location.href =
-        "account.html";
+function loadAccountProfile(user) {
+
+    const name = user.name || "User";
+    const email = user.email || "-";
+
+    document.getElementById("profileInitial").textContent = name.trim().charAt(0).toUpperCase();
+    document.getElementById("profileName").textContent = name;
+    document.getElementById("profileEmail").textContent = email;
+
+    if (user.createdAt) {
+        const date = new Date(user.createdAt);
+        document.getElementById("profileJoiningDate").textContent =
+            date.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+    } else {
+        document.getElementById("profileJoiningDate").textContent = "Not available";
+    }
 }
 
 
@@ -2140,6 +2283,8 @@ document.addEventListener(
 
                 if (event.key === "Escape") {
                     if (libraryView?.classList.contains("open")) closeLibrary();
+                    if (accountView?.classList.contains("open")) closeAccountView();
+                    if (historyModal?.classList.contains("open")) closeHistoryPanel();
                     if (saveToPlaylistModal?.classList.contains("open")) {
                         saveToPlaylistModal.classList.remove("open");
                         saveToPlaylistModal.setAttribute("aria-hidden", "true");
@@ -2243,7 +2388,7 @@ document.addEventListener(
             document.body.classList.add("library-open");
         }
 
-        function renderLibrarySongs(songs, artistLinks = false) {
+        function renderLibrarySongs(songs, artistLinks = false, playlist = null) {
             libraryList.replaceChildren();
             if (!songs.length) {
                 const empty = document.createElement("p");
@@ -2269,6 +2414,25 @@ document.addEventListener(
                 if (!artistLinks) artist.textContent = song.artist || "Unknown artist";
                 info.append(title, artist);
                 row.append(cover, info);
+                if (playlist) {
+                    const unsave = document.createElement("button");
+                    unsave.type = "button";
+                    unsave.className = "library-row-remove";
+                    unsave.innerHTML = REMOVE_ICON;
+                    unsave.title = "Remove from playlist";
+                    unsave.setAttribute("aria-label", `Remove ${song.title || "song"} from ${playlist.name || "this playlist"}`);
+                    unsave.addEventListener("click", async event => {
+                        event.stopPropagation();
+                        try {
+                            await apiCall(`/playlists/${playlist.id}/songs/${song.id}`, { method: "DELETE" });
+                            await openPlaylist(playlist.id);
+                            showPlaybackNotice(`Removed from “${playlist.name}”`);
+                        } catch (error) {
+                            showPlaybackNotice(error.message || "Could not remove song from playlist.");
+                        }
+                    });
+                    row.append(unsave);
+                }
                 row.addEventListener("click", () => playSong(song, songs));
                 libraryList.appendChild(row);
             });
@@ -2282,7 +2446,7 @@ document.addEventListener(
                 back.className = "library-back-link";
                 back.textContent = "‹ My Library";
                 back.addEventListener("click", openMyLibrary);
-                renderLibrarySongs(detail.songs || [], true);
+                renderLibrarySongs(detail.songs || [], true, detail.playlist);
                 libraryList.prepend(back);
                 showLibrary(detail.playlist.name);
             } catch (error) {
@@ -2463,133 +2627,156 @@ document.addEventListener(
             document.body.classList.remove("library-open");
         }
 
-        function renderAccountPanel() {
-            const rawUser = localStorage.getItem("melody_user");
-            let user = {};
-            try { user = JSON.parse(rawUser || "{}"); } catch (error) { user = {}; }
-            libraryList.replaceChildren();
+        /* =================================================
+           ACCOUNT VIEW (merged from account.html/css/js)
+           Opens in place of the home content - no page
+           navigation, no reload.
+        ================================================= */
 
-            const profile = document.createElement("div");
-            profile.className = "library-account-profile";
-            const avatar = document.createElement("span");
-            avatar.className = "library-account-avatar";
-            avatar.textContent = String(user.name || "U").trim().charAt(0).toUpperCase();
-            const details = document.createElement("div");
-            details.className = "library-account-details";
-            const name = document.createElement("strong");
-            name.textContent = user.name || "Melody listener";
-            const email = document.createElement("span");
-            email.textContent = user.email || "";
-            details.append(name, email);
-            profile.append(avatar, details);
+        const accountView = document.getElementById("accountView");
+        const accountBackButton = document.getElementById("accountBackButton");
+        const accountHistoryOption = document.getElementById("accountHistoryOption");
+        const accountSignOutOption = document.getElementById("accountSignOutOption");
+        const historyModal = document.getElementById("historyModal");
+        const historyList = document.getElementById("historyList");
+        const closeHistoryModal = document.getElementById("closeHistoryModal");
+        let historyQueue = [];
 
-            const history = document.createElement("button");
-            history.type = "button";
-            history.className = "library-account-action";
-            const historyTitle = document.createElement("strong");
-            historyTitle.textContent = "Listening history";
-            const historySubtitle = document.createElement("span");
-            historySubtitle.textContent = "Songs played in the last 30 days";
-            const historyArrow = document.createElement("span");
-            historyArrow.textContent = "›";
-            history.append(historyTitle, historySubtitle, historyArrow);
-            history.addEventListener("click", openAccountHistory);
-
-            const signOut = document.createElement("button");
-            signOut.type = "button";
-            signOut.className = "library-account-signout";
-            signOut.textContent = "Sign out";
-            signOut.addEventListener("click", () => {
-                const lastSongKey = getLastSongStorageKey();
-                localStorage.removeItem("melody_token");
-                localStorage.removeItem("melody_user");
-                if (lastSongKey) localStorage.removeItem(lastSongKey);
+        function openAccountView() {
+            const user = getLoggedInUser();
+            if (!user) {
                 window.location.href = "index.html";
-            });
-
-            libraryList.append(profile, history, signOut);
-            showLibrary("Your account");
-        }
-
-        async function openAccountHistory() {
-            libraryList.replaceChildren();
-            const back = document.createElement("button");
-            back.type = "button";
-            back.className = "library-back-link";
-            back.textContent = "‹ Account";
-            back.addEventListener("click", renderAccountPanel);
-            libraryList.appendChild(back);
-            const loading = document.createElement("p");
-            loading.className = "library-empty";
-            loading.textContent = "Loading your listening history…";
-            libraryList.appendChild(loading);
-            showLibrary("Listening history · Last 30 days");
-
-            try {
-                const response = await fetch(`${API_URL}/library/history`, { headers: getAuthHeaders() });
-                if (response.status === 401) {
-                    throw new Error("Your sign-in has expired. Please sign in again to view history.");
-                }
-                if (response.status === 403) {
-                    throw new Error("You are signed in, but do not have permission to view this history.");
-                }
-                if (!response.ok) throw new Error("Could not load listening history.");
-                const entries = await response.json();
-                libraryList.replaceChildren(back);
-                const historyGroups = groupHistoryByLocalDate(entries || []);
-                if (!historyGroups.length) {
-                    const empty = document.createElement("p");
-                    empty.className = "library-empty";
-                    empty.textContent = "No songs played in the last 30 days.";
-                    libraryList.appendChild(empty);
-                    return;
-                }
-                historyGroups.forEach((group, groupIndex) => {
-                    const section = document.createElement("details");
-                    section.className = "library-history-day";
-                    section.open = group.label === "Today";
-                    const summary = document.createElement("summary");
-                    summary.className = "library-history-day-heading";
-                    const label = document.createElement("strong");
-                    label.textContent = group.label;
-                    const count = document.createElement("small");
-                    count.textContent = `${group.entries.length} ${group.entries.length === 1 ? "song" : "songs"}`;
-                    summary.append(label, count);
-                    const rows = document.createElement("div");
-                    rows.className = "library-history-entries";
-                    group.entries.forEach((entry, index) => {
-                        const row = document.createElement("article");
-                        row.className = "library-history-row";
-                        const cover = document.createElement("span");
-                        cover.className = `library-history-cover album-${((groupIndex + index) % 4) + 1}`;
-                        cover.textContent = String(entry.title || "♫").trim().charAt(0).toUpperCase();
-                        applySongThumbnail(cover, entry);
-                        const song = document.createElement("span");
-                        song.className = "library-history-song";
-                        const title = document.createElement("strong");
-                        title.textContent = entry.title || "Unknown title";
-                        const artist = createArtistLink(entry.artist, "library-history-artist");
-                        song.append(title, artist);
-                        const playedAt = document.createElement("time");
-                        const date = new Date(entry.playedAt);
-                        playedAt.dateTime = entry.playedAt;
-                        playedAt.textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-                        row.append(cover, song, playedAt);
-                        rows.appendChild(row);
-                    });
-                    section.append(summary, rows);
-                    libraryList.appendChild(section);
-                });
-            } catch (error) {
-                libraryList.replaceChildren(back);
-                const message = document.createElement("p");
-                message.className = "library-empty library-history-error";
-                message.textContent = error.message || "Could not load listening history.";
-                libraryList.appendChild(message);
+                return;
             }
+            loadAccountProfile(user);
+            accountView.classList.add("open");
+            accountView.setAttribute("aria-hidden", "false");
+            document.body.classList.add("account-open");
         }
 
-        profileButton?.addEventListener("click", renderAccountPanel);
+        function closeAccountView() {
+            accountView?.classList.remove("open");
+            accountView?.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("account-open");
+        }
+
+        function openHistoryPanel() {
+            if (!historyModal || !historyList) return;
+
+            historyModal.classList.add("open");
+            historyModal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("modal-open");
+
+            historyList.replaceChildren();
+            const loading = document.createElement("p");
+            loading.className = "history-empty";
+            loading.textContent = "Loading your listening history…";
+            historyList.appendChild(loading);
+
+            fetch(`${API_URL}/library/history`, { headers: getAuthHeaders() })
+                .then(async response => {
+                    if (response.status === 401) {
+                        throw new Error("Your sign-in has expired. Please sign in again to view history.");
+                    }
+                    if (response.status === 403) {
+                        throw new Error("You are signed in, but do not have permission to view this history.");
+                    }
+                    if (!response.ok) throw new Error("Could not load your listening history.");
+                    return response.json();
+                })
+                .then(entries => {
+                    historyList.replaceChildren();
+                    historyQueue = uniqueSongsById(entries || []);
+                    const groups = groupHistoryByLocalDate(entries || []);
+                    if (!groups.length) {
+                        const empty = document.createElement("p");
+                        empty.className = "history-empty";
+                        empty.textContent = "No songs played in the last 30 days.";
+                        historyList.appendChild(empty);
+                        return;
+                    }
+                    groups.forEach((group, groupIndex) => {
+                        const section = document.createElement("details");
+                        section.className = "history-day";
+                        section.open = group.label === "Today";
+                        const summary = document.createElement("summary");
+                        summary.className = "history-day-heading";
+                        const label = document.createElement("strong");
+                        label.textContent = group.label;
+                        const count = document.createElement("small");
+                        count.textContent = `${group.entries.length} ${group.entries.length === 1 ? "song" : "songs"}`;
+                        summary.append(label, count);
+                        const rows = document.createElement("div");
+                        rows.className = "history-day-entries";
+                        group.entries.forEach((entry, index) => {
+                            const row = document.createElement("article");
+                            row.className = "history-entry";
+                            const cover = document.createElement("div");
+                            cover.className = `history-cover history-cover-${((groupIndex + index) % 5) + 1}`;
+                            cover.textContent = String(entry.title || "♫").trim().charAt(0).toUpperCase();
+                            applySongThumbnail(cover, entry);
+                            const info = document.createElement("div");
+                            info.className = "history-song";
+                            const title = document.createElement("strong");
+                            title.textContent = entry.title || "Unknown title";
+                            const artist = createArtistLink(entry.artist, "history-artist-link", closeHistoryPanel);
+                            info.append(title, artist);
+                            const playedAt = document.createElement("time");
+                            const date = new Date(entry.playedAt);
+                            playedAt.dateTime = entry.playedAt;
+                            playedAt.textContent = Number.isNaN(date.getTime())
+                                ? ""
+                                : date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+                            row.append(cover, info, playedAt);
+                            row.addEventListener("click", () => playHistoryEntry(entry));
+                            rows.appendChild(row);
+                        });
+                        section.append(summary, rows);
+                        historyList.appendChild(section);
+                    });
+                })
+                .catch(error => {
+                    historyList.replaceChildren();
+                    const message = document.createElement("p");
+                    message.className = "history-empty history-error";
+                    message.textContent = error.message || "Could not load your listening history.";
+                    historyList.appendChild(message);
+                });
+        }
+
+        function resolveHistorySong(entry) {
+            const match = allSongs.find(item => String(item.id) === String(entry.id));
+            return match ? { ...match, playedAt: entry.playedAt } : entry;
+        }
+
+        function playHistoryEntry(entry) {
+            const song = resolveHistorySong(entry);
+            if (!song.audioUrl) {
+                showPlaybackNotice("This song's audio isn't available right now.");
+                return;
+            }
+            const queue = historyQueue.length ? historyQueue.map(resolveHistorySong) : [song];
+            playSong(song, queue);
+        }
+
+        function closeHistoryPanel() {
+            if (!historyModal) return;
+            historyModal.classList.remove("open");
+            historyModal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("modal-open");
+        }
+
+        accountBackButton?.addEventListener("click", closeAccountView);
+        accountHistoryOption?.addEventListener("click", openHistoryPanel);
+        closeHistoryModal?.addEventListener("click", closeHistoryPanel);
+        accountSignOutOption?.addEventListener("click", () => {
+            saveCurrentPlaybackPosition(true);
+            localStorage.removeItem("melody_token");
+            localStorage.removeItem("melody_user");
+            window.location.href = "index.html";
+        });
+
+        profileButton?.addEventListener("click", openAccountView);
         document.querySelectorAll(".see-all[data-view]").forEach((button) => {
             button.addEventListener("click", () => openLibrary(button.dataset.view));
         });
@@ -2604,12 +2791,6 @@ document.addEventListener(
         document.getElementById("myLibraryNav")?.addEventListener("click", event => {
             event.preventDefault();
             openMyLibrary();
-        });
-        document.querySelectorAll(".player-artist-link").forEach(button => {
-            button.addEventListener("click", event => {
-                event.stopPropagation();
-                if (currentSong?.artist) openArtistSongs(currentSong.artist);
-            });
         });
         ["compactSaveButton", "expandedSaveButton"].forEach(id => {
             document.getElementById(id)?.addEventListener("click", event => {
@@ -2644,7 +2825,7 @@ document.addEventListener(
             openPlayer();
         });
         restoreLastPlayedSong();
-        loadSongs();
+        loadSongs().then(loadServerPlaybackState);
         loadArtistDirectory().catch(error => console.error("Could not load artists:", error));
         refreshLikedSongs().catch(error => console.error("Could not load liked songs:", error));
         refreshPlaylists().catch(error => console.error("Could not load playlists:", error));

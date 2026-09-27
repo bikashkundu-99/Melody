@@ -8,7 +8,7 @@ body {
   background: #090909;
   color: #fff;
 }
-body.modal-open, body.player-open, body.library-open {
+body.modal-open, body.player-open, body.library-open, body.account-open {
   overflow: hidden;
 }
 /* ================= SIDEBAR ================= */
@@ -1252,7 +1252,7 @@ body { background: #0b1427; color:#f4f7fb; }
 .liked-artist-link,.library-artist-link { width:max-content; max-width:100%; margin-top:2px; padding:0; color:#91a0b7; font-size:11px; }
 .liked-artist-link:hover,.library-artist-link:hover,.library-history-artist:hover { color:var(--teal); }
 .liked-song .liked-artist-link { font-size:11px; }
-.library-row { grid-template-columns:44px minmax(0,1fr); gap:12px; }
+.library-row { grid-template-columns:44px minmax(0,1fr) auto; gap:12px; }
 .library-artist-link { font-size:10px; }
 .library-history-artist { width:max-content; max-width:100%; margin-top:0; padding:0; color:#96a9c2; font-size:10px; text-align:left; }
 .top-artist-row { grid-template-columns:42px minmax(0,1fr) 20px; }
@@ -1286,6 +1286,7 @@ body { background: #0b1427; color:#f4f7fb; }
 .liked-song .liked-artist-link { font-size:13px; }
 .song-info p { font-size:12px; }
 .search-result-info small { font-size:12px; }
+.search-result-artist { color:#8d9eb5; font-size:12px; }
 .artist-card strong { font-size:12px; }
 @media (max-width:600px) {
     .expanded-controls { width:94vw; gap:8px; }
@@ -1433,4 +1434,274 @@ body { background: #0b1427; color:#f4f7fb; }
     .artist-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
     .library-list.artist-directory-list .top-artist-row { grid-template-columns: 46px minmax(0, 1fr) 18px; gap: 10px; padding: 8px; }
     .library-list.artist-directory-list .top-artist-avatar { width: 46px; height: 46px; }
+}
+
+/* =====================================================
+   ACCOUNT VIEW (merged from account.css)
+   Same page overlay: opened from the profile button,
+   closed with the back button or Escape - no navigation.
+===================================================== */
+
+.account-view {
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    display: none;
+    overflow-y: auto;
+    background: #0b1427;
+}
+.account-view.open { display: block; }
+
+.account-page {
+    min-height: 100vh;
+    padding: 40px;
+}
+
+.account-container {
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+}
+
+.account-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 35px;
+}
+.account-header h1 { font-size: 30px; }
+
+.back-button {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: #1b2d47;
+    color: #ffffff;
+    font-size: 22px;
+    cursor: pointer;
+}
+.back-button:hover { background: #203550; }
+
+.profile-card {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 25px;
+    background: #111d33;
+    border: 1px solid #263853;
+    border-radius: 14px;
+    margin-bottom: 25px;
+}
+
+.large-profile {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10c9cf, #3864dc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.profile-info { flex: 1; min-width: 0; }
+.profile-info h2 { font-size: 21px; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-info p { color: #888888; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-joined {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    text-align: right;
+}
+.profile-joined-label { color: #777777; font-size: 12px; }
+.profile-joined-value { font-size: 14px; }
+
+.options {
+    background: #111d33;
+    border: 1px solid #263853;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.option {
+    width: 100%;
+    min-height: 75px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 15px 22px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #263853;
+    color: #ffffff;
+    text-align: left;
+    cursor: pointer;
+}
+.option:last-child { border-bottom: none; }
+.option:hover { background: #203550; }
+
+.option-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1b2d47;
+    color: #27d0d2;
+    font-size: 18px;
+}
+
+.option-content { flex: 1; }
+.option-content strong { display: block; font-size: 15px; margin-bottom: 5px; }
+.option-content span { color: #777777; font-size: 12px; }
+
+.arrow { color: #777777; font-size: 22px; }
+
+.sign-out { color: #ff7188; }
+.sign-out .option-icon { color: #ff7188; }
+
+/* Listening history, opened as its own modal (same chrome as Liked Songs). */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-top: 8px;
+}
+.history-entry {
+    display: grid;
+    grid-template-columns: 46px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.history-entry:hover { background: #1b2d47; }
+.history-cover {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 18px;
+    text-shadow: 0 1px 8px #0006;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+}
+.history-cover-1 { background-image: linear-gradient(135deg,#7554a4,#203d68); }
+.history-cover-2 { background-image: linear-gradient(135deg,#d05b7b,#292c62); }
+.history-cover-3 { background-image: linear-gradient(135deg,#178e91,#274370); }
+.history-cover-4 { background-image: linear-gradient(135deg,#df9c40,#683d7e); }
+.history-cover-5 { background-image: linear-gradient(135deg,#4b69ab,#232f4b); }
+.history-song { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
+.history-song strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.history-song .history-artist-link { color: #91a0b7; font-size: 13px; }
+.history-entry time { color: #91a0b7; font-size: 11px; white-space: nowrap; }
+.history-empty { padding: 22px 8px; color: #91a0b7; font-size: 13px; }
+.history-error { color: #ff9cae; }
+
+.history-day { margin: 5px 0 8px; border: 1px solid #ffffff10; border-radius: 9px; background: #ffffff05; overflow: hidden; }
+.history-day-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    color: #e8f1fc;
+    cursor: pointer;
+    list-style: none;
+}
+.history-day-heading::-webkit-details-marker { display: none; }
+.history-day-heading::after { content: "⌄"; margin-left: 5px; color: #13c4c8; transition: transform .16s; }
+.history-day[open] > .history-day-heading::after { transform: rotate(180deg); }
+.history-day-heading strong { font-size: 13px; }
+.history-day-heading small { margin-left: auto; color: #91a4bc; font-size: 10px; }
+.history-day-entries { padding: 0 7px 7px; }
+.history-day-entries .history-entry { border-top: 1px solid #ffffff09; }
+
+@media (max-width: 600px) {
+    .account-page { padding: 20px; }
+    .profile-card { flex-wrap: wrap; }
+    .profile-joined { align-items: flex-start; text-align: left; flex-basis: 100%; flex-direction: row; gap: 8px; padding-left: 88px; margin-top: -6px; }
+    .history-entry { grid-template-columns: 40px minmax(0,1fr); }
+    .history-cover { width: 40px; height: 40px; }
+    .history-entry time { grid-column: 2; font-size: 10px; }
+    .history-day-heading { padding: 11px 10px; }
+}
+
+/* =====================================================
+   MULTI-ARTIST LINKS
+   A song's artist field can list several names ("The
+   Weeknd, JENNIE & Lily Rose"); each name becomes its
+   own clickable link, wherever artists are shown.
+===================================================== */
+
+.artist-links { display: inline; }
+.artist-links .player-artist-link {
+    display: inline;
+    max-width: none;
+    padding: 0;
+    overflow: visible;
+    white-space: normal;
+    vertical-align: baseline;
+    cursor: pointer;
+}
+
+/* Unsave (remove from playlist) action on a playlist's song rows. */
+.library-row-remove {
+    flex-shrink: 0;
+    border: 0;
+    background: transparent;
+    color: #ff7188;
+    padding: 8px;
+    cursor: pointer;
+}
+.library-row-remove svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.library-row-remove:hover { color: #ff97a8; }
+
+/* Liked songs and history rows are clickable to play - show that. */
+.liked-row { cursor: pointer; }
+
+/* Now playing bar / expanded player: each credited artist is its own link. */
+.now-playing-artist {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.now-playing-artist:hover { color: var(--teal); text-decoration: underline; }
+.now-playing-artist:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+/* Undo the single-link hover style on the wrapper itself - :hover on a
+   child button also counts as :hover on this ancestor, which used to turn
+   the whole string (including the "&"/"," separators) teal. */
+#compactArtist.player-artist-link:hover,
+#expandedArtist.player-artist-link:hover {
+    color: #91a0b7;
+    text-decoration: none;
+}
+/* The expanded player has room to breathe - let multiple artist names wrap
+   and stay centered instead of truncating with an ellipsis. */
+.expanded-song-info #expandedArtist {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }

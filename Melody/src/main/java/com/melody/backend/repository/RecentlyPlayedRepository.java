@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import java.util.List;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 public interface RecentlyPlayedRepository extends JpaRepository<RecentlyPlayed, Long> {
     @EntityGraph(attributePaths = "song")
@@ -12,4 +13,7 @@ public interface RecentlyPlayedRepository extends JpaRepository<RecentlyPlayed, 
 
     @EntityGraph(attributePaths = "song")
     List<RecentlyPlayed> findByUser_IdAndPlayedAtGreaterThanEqualOrderByPlayedAtDesc(Long userId, LocalDateTime since);
+
+    @EntityGraph(attributePaths = "song")
+    Optional<RecentlyPlayed> findFirstByUser_IdOrderByPlayedAtDescIdDesc(Long userId);
 }

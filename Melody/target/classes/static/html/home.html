@@ -36,6 +36,12 @@
         <div class="search">
             <span class="search-icon">⌕</span>
             <input type="text" id="searchInput" placeholder="Search songs, artists, albums...">
+            <button type="button" class="voice-search-button" id="microphoneButton" aria-label="Search by voice" aria-pressed="false" title="Search by voice">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" />
+                    <path d="M19 11a7 7 0 0 1-14 0M12 18v4m-4 0h8" />
+                </svg>
+            </button>
             <section class="search-results-panel" id="searchResultsPanel" aria-live="polite" hidden>
                 <h2>Search results</h2>
                 <div class="search-results-grid" id="searchResultsGrid"></div>
@@ -67,37 +73,27 @@
 
             <div class="music-grid">
                 <div class="music-card">
-                    <div class="album gradient-1">
-                        <div class="play-button">▶</div>
-                    </div>
+                    <div class="album gradient-1"></div>
                     <h3>Midnight Vibes</h3>
                     <p>Chill • Electronic</p>
                 </div>
                 <div class="music-card">
-                    <div class="album gradient-2">
-                        <div class="play-button">▶</div>
-                    </div>
+                    <div class="album gradient-2"></div>
                     <h3>Late Night Drive</h3>
                     <p>Pop • R&amp;B</p>
                 </div>
                 <div class="music-card">
-                    <div class="album gradient-3">
-                        <div class="play-button">▶</div>
-                    </div>
+                    <div class="album gradient-3"></div>
                     <h3>Focus Flow</h3>
                     <p>Instrumental</p>
                 </div>
                 <div class="music-card">
-                    <div class="album gradient-4">
-                        <div class="play-button">▶</div>
-                    </div>
+                    <div class="album gradient-4"></div>
                     <h3>Feel Good</h3>
                     <p>Pop Hits</p>
                 </div>
                 <div class="music-card">
-                    <div class="album gradient-5">
-                        <div class="play-button">▶</div>
-                    </div>
+                    <div class="album gradient-5"></div>
                     <h3>Deep Focus</h3>
                     <p>Ambient</p>
                 </div>
@@ -109,7 +105,7 @@
                 <button class="see-all" type="button" data-view="artists">See all</button>
             </div>
             <div class="artist-grid" id="topArtistsGrid">
-                <p class="artist-empty">Your most-played artists will appear here.</p>
+                <p class="artist-empty">Your artists will appear here.</p>
             </div>
         </section>
     </div>
@@ -168,10 +164,12 @@
             <button class="player-artist-link" id="expandedArtist" type="button">Choose a song to start listening</button>
         </div>
 
-        <div class="expanded-progress">
-            <span class="current-time">0:00</span>
-            <input class="seek-slider expanded-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek through song">
-            <span class="duration-time">0:00</span>
+        <div class="expanded-timeline">
+            <div class="expanded-progress">
+                <span class="current-time">0:00</span>
+                <input class="seek-slider expanded-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek through song">
+                <span class="duration-time">0:00</span>
+            </div>
         </div>
 
         <div class="expanded-controls">
@@ -180,9 +178,9 @@
             <button type="button" class="expanded-control player-control" aria-label="Next song" title="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
             <button type="button" class="expanded-like player-control" id="expandedLikeButton" aria-label="Like song" title="Like song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.5-8.8 10.1-8.8 10.1S3.2 14.3 3.2 8.8A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.4Z"/></svg></button>
             <button type="button" class="player-save" id="expandedSaveButton" aria-label="Save to playlist" title="Save to playlist">Save</button>
+            <button class="repeat-toggle expanded-repeat" type="button" aria-label="Repeat off" aria-pressed="false" title="Repeat off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg></button>
         </div>
         <div class="expanded-volume" aria-label="Volume controls">
-            <button class="repeat-toggle" type="button" aria-label="Repeat off" aria-pressed="false" title="Repeat off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg></button>
             <button class="volume-mute" type="button" aria-label="Mute" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4zM17 9a5 5 0 0 1 0 6"/></svg></button>
             <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
         </div>
@@ -231,11 +229,6 @@
                 <p>Your favorite songs</p>
             </div>
             <div class="liked-header-actions">
-                <div class="liked-playback-controls" aria-label="Liked songs playback controls">
-                    <button type="button" id="likedPrevious" aria-label="Previous liked song" title="Previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6l-9 6 9 6z"/></svg></button>
-                    <button type="button" id="likedPlayPause" class="liked-play-toggle" aria-label="Play liked songs" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button>
-                    <button type="button" id="likedNext" aria-label="Next liked song" title="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l9 6-9 6z"/></svg></button>
-                </div>
                 <button class="close-panel" id="closeLikedSongs" type="button" aria-label="Close">×</button>
             </div>
         </div>

@@ -5,6 +5,7 @@ import com.melody.backend.entity.RecentlyPlayed;
 import com.melody.backend.entity.Song;
 import com.melody.backend.entity.User;
 import com.melody.backend.dto.ListeningHistoryEntry;
+import org.springframework.http.ResponseEntity;
 import com.melody.backend.repository.LikedSongRepository;
 import com.melody.backend.repository.RecentlyPlayedRepository;
 import com.melody.backend.repository.SongRepository;
@@ -68,6 +69,31 @@ public class LibraryController {
                 .stream().map(ListeningHistoryEntry::from).toList();
     }
 
+    @GetMapping("/playback-state")
+    public ResponseEntity<PlaybackStateResponse> getPlaybackState(@AuthenticationPrincipal User user) {
+        return recentlyPlayed.findFirstByUser_IdOrderByPlayedAtDescIdDesc(user.getId())
+                .map(entry -> ResponseEntity.ok(PlaybackStateResponse.from(entry)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @PutMapping("/playback-state")
+    @Transactional
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updatePlaybackState(@AuthenticationPrincipal User user,
+                                    @RequestBody PlaybackPositionRequest request) {
+        if (request.songId() == null || request.positionSeconds() == null
+                || !Double.isFinite(request.positionSeconds()) || request.positionSeconds() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid song and playback position are required");
+        }
+
+        recentlyPlayed.findFirstByUser_IdOrderByPlayedAtDescIdDesc(user.getId())
+                .filter(entry -> entry.getSong().getId().equals(request.songId()))
+                .ifPresent(entry -> {
+                    entry.setPlaybackPositionSeconds(request.positionSeconds());
+                    recentlyPlayed.save(entry);
+                });
+    }
+
     @PostMapping("/recent/{songId}")
     @Transactional
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -77,6 +103,30 @@ public class LibraryController {
         RecentlyPlayed play = new RecentlyPlayed();
         play.setUser(user);
         play.setSong(song);
+        play.setPlaybackPositionSeconds(0.0);
         recentlyPlayed.save(play);
+    }
+
+    public record PlaybackPositionRequest(Long songId, Double positionSeconds) {
+    }
+
+    public record PlaybackStateResponse(
+            Long songId,
+            String title,
+            String artist,
+            String album,
+            String audioUrl,
+            String thumbnailUrl,
+            Integer durationSeconds,
+            Double positionSeconds
+    ) {
+        private static PlaybackStateResponse from(RecentlyPlayed entry) {
+            Song song = entry.getSong();
+            return new PlaybackStateResponse(
+                    song.getId(), song.getTitle(), song.getArtist(), song.getAlbum(),
+                    song.getAudioUrl(), song.getThumbnailUrl(), song.getDurationSeconds(),
+                    entry.getPlaybackPositionSeconds()
+            );
+        }
     }
 }
